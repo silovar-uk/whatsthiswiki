@@ -3,44 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#f3efe4">
+  <meta name="theme-color" content="#ffd91a">
   <meta name="description" content="Wikipediaの記事を、目次だけで当てるクイズ。ログインなしで遊び、同じ問題をURLで共有できます。">
   <meta property="og:title" content="What's This Wiki?">
-  <meta property="og:description" content="目次だけで、何の記事？ ログインなしのWikipediaクイズ。">
+  <meta property="og:description" content="目次だけで、何の記事？ 知識より勘が頼りのWikipediaクイズ。">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
   <title>What's This Wiki?｜目次だけで何の記事？</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="./assets/favicon.ico">
+  <link rel="icon" href="./assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./gags.css">
 </head>
 <body>
+  <div class="paper-noise" aria-hidden="true"></div>
   <div class="page-shell">
     <header class="site-header">
       <a class="brand" href="./" aria-label="トップへ戻る">
-        <span class="brand-mark">W?</span>
+        <span class="brand-mark"><img src="./assets/favicon.svg" alt=""></span>
         <span>
           <strong>What's This Wiki?</strong>
-          <small>目次だけで、何の記事？</small>
+          <small>目次だけで、何の記事？（無茶）</small>
         </span>
       </a>
-      <button id="share-header" class="button button-quiet is-hidden" type="button">この問題を共有</button>
+      <span class="header-excuse" aria-hidden="true">※答えは知りません顔で</span>
+      <button id="share-header" class="button button-quiet is-hidden" type="button">この問題を友達に投げる</button>
     </header>
 
     <main id="app" class="app" aria-live="polite"></main>
 
     <footer class="site-footer">
+      <p><strong>このサイトの方針：</strong>知識がなくても、ひらめきと勢いで押し切る。</p>
       <p>Wikipediaの記事情報を利用しています。回答後に元記事へのリンクを表示します。</p>
-      <p>非公式サービスであり、Wikimedia FoundationおよびQuizKnockとは関係ありません。</p>
+      <p>非公式サービスであり、Wikimedia FoundationおよびQuizKnockとは関係ありません。向こうもたぶん困ります。</p>
     </footer>
   </div>
 
   <template id="loading-template">
     <section class="panel loading-panel">
       <div class="spinner" aria-hidden="true"></div>
-      <p data-loading-message>問題を準備中…</p>
-      <small>良問になりそうな記事だけを選んでいます。</small>
+      <p data-loading-message>Wikipediaの森で迷子を選別中…</p>
+      <small>良問・珍問・なんで項目あるんだ問を探しています。</small>
     </section>
   </template>
 
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./gags.js"></script>
 </body>
 </html>
