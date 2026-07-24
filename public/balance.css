@@ -1,0 +1,94 @@
+/*
+ * おふざけ強度 B：各画面に遊びは残すが、回答操作は絶対に邪魔しない。
+ * gags.cssの表現を消さず、操作レイヤーだけ前面へ戻す調整層。
+ */
+
+.gag-sticker {
+  pointer-events: none;
+  user-select: none;
+}
+
+.answer-panel form,
+.answer-panel .choice-list,
+.answer-panel .give-up-confirm,
+.answer-panel .answer-result {
+  position: relative;
+  z-index: 12;
+}
+
+.answer-panel input,
+.answer-panel button,
+.choice-button {
+  touch-action: manipulation;
+}
+
+.wiki-mascot {
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+/* プレイ中は存在感を一段下げる。ホバー時だけ再びしゃべる。 */
+.wiki-mascot.is-playing {
+  opacity: .78;
+  transform: scale(.84);
+  transform-origin: right bottom;
+}
+
+.wiki-mascot.is-playing .wiki-mascot__bubble {
+  opacity: 0;
+  transform: translateY(5px) rotate(-3deg);
+  transition: opacity .16s ease, transform .16s ease;
+  pointer-events: none;
+}
+
+.wiki-mascot.is-playing:hover,
+.wiki-mascot.is-playing:focus-within {
+  opacity: 1;
+}
+
+.wiki-mascot.is-playing:hover .wiki-mascot__bubble,
+.wiki-mascot.is-playing:focus-within .wiki-mascot__bubble {
+  opacity: 1;
+  transform: translateY(0) rotate(-3deg);
+}
+
+/* 付箋は余白側へ逃がし、本文・入力欄へかぶせない。 */
+.gag-sticker--toc {
+  right: -18px;
+}
+
+.gag-sticker--answer {
+  right: -10px;
+}
+
+@media (max-width: 900px) {
+  .gag-sticker--toc {
+    right: 2px;
+    top: -30px;
+  }
+
+  .gag-sticker--answer {
+    right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  /* スマホの回答中はアイコンだけ。画面右下の操作領域を空ける。 */
+  .wiki-mascot.is-playing {
+    right: 5px;
+    bottom: 5px;
+    opacity: .42;
+    transform: scale(.72);
+    pointer-events: none;
+  }
+
+  .gag-sticker--toc {
+    max-width: 76px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-mascot,
+  .wiki-mascot__bubble {
+    transition: none;
+  }
+}
