@@ -16,18 +16,12 @@ const MASCOT_LINES = [
   '知らん記事も来るよ'
 ];
 
-let lastSignature = '';
 let mascotLineIndex = 0;
 
-function signature() {
-  return [
-    Boolean(app.querySelector('.hero')),
-    Boolean(app.querySelector('.toc-panel')),
-    Boolean(app.querySelector('.answer-result')),
-    Boolean(app.querySelector('.result-hero')),
-    Boolean(app.querySelector('.invite-panel')),
-    Boolean(app.querySelector('.loading-panel'))
-  ].join(':');
+function markOnce(target) {
+  if (!target || target.dataset.gagReady === '1') return false;
+  target.dataset.gagReady = '1';
+  return true;
 }
 
 function ensureMascot() {
@@ -62,7 +56,7 @@ function addSticker(target, text, className = '') {
 
 function decorateHome() {
   const hero = app.querySelector('.hero');
-  if (!hero) return;
+  if (!markOnce(hero)) return;
   const slogan = HOME_SLOGANS[Math.floor(Math.random() * HOME_SLOGANS.length)];
   hero.dataset.gag = slogan;
   addSticker(hero, `目次だけだが\n何か？`, 'gag-sticker--hero');
@@ -79,7 +73,7 @@ function decorateHome() {
 
 function decorateQuestion() {
   const toc = app.querySelector('.toc-panel');
-  if (!toc) return;
+  if (!markOnce(toc)) return;
   toc.dataset.gag = '目次、急に饒舌。';
   addSticker(toc, `ヒントは\nこれだけ`, 'gag-sticker--toc');
 
@@ -98,7 +92,7 @@ function decorateQuestion() {
 
 function decorateAnswer() {
   const result = app.querySelector('.answer-result');
-  if (!result) return;
+  if (!markOnce(result)) return;
   result.dataset.gag = result.classList.contains('is-correct')
     ? 'なんで分かった？ こわ。'
     : 'Wikipediaは広い。今日はそれでいい。';
@@ -111,7 +105,7 @@ function decorateAnswer() {
 
 function decorateResults() {
   const result = app.querySelector('.result-hero');
-  if (!result) return;
+  if (!markOnce(result)) return;
   result.dataset.gag = '知識と勘と、若干の運の総決算。';
   addSticker(result, `結果は\n結果です`, 'gag-sticker--result');
 
@@ -124,22 +118,18 @@ function decorateResults() {
 
 function decorateInvite() {
   const invite = app.querySelector('.invite-panel');
-  if (!invite) return;
+  if (!markOnce(invite)) return;
   invite.dataset.gag = '友達から目次が届いています。怖いですね。';
   addSticker(invite, `逃げても\nいいよ`, 'gag-sticker--invite');
 }
 
 function decorateLoading() {
   const loading = app.querySelector('.loading-panel');
-  if (!loading) return;
+  if (!markOnce(loading)) return;
   loading.dataset.gag = 'Wikipedia側は通常営業です。';
 }
 
 function decorate() {
-  const nextSignature = signature();
-  if (nextSignature === lastSignature) return;
-  lastSignature = nextSignature;
-
   const mascot = ensureMascot();
   mascot.querySelector('.wiki-mascot__bubble').textContent = MASCOT_LINES[mascotLineIndex];
   mascot.classList.toggle('is-playing', Boolean(app.querySelector('.toc-panel')));
