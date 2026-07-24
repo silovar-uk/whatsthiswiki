@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f4ed">
+  <meta name="description" content="Wikipediaの記事を、目次だけで当てるクイズ。友達にURLを送ってスコアを競えます。">
+  <meta id="og-title" property="og:title" content="What's This Wiki?">
+  <meta id="og-description" property="og:description" content="Wikipediaの目次だけで記事を当てるクイズ">
+  <meta id="og-url" property="og:url" content="">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ja_JP">
+  <title>What's This Wiki?</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="/" data-link>
+        <span class="brand-mark">W?</span>
+        <span>
+          <strong>What's This Wiki?</strong>
+          <small>目次だけで、何の記事？</small>
+        </span>
+      </a>
+      <button id="share-header" class="button button-quiet is-hidden" type="button">共有</button>
+    </header>
+
+    <main id="app" class="app" aria-live="polite"></main>
+
+    <footer class="site-footer">
+      <p>Wikipediaの記事情報を利用しています。各問題の回答後に出典を表示します。</p>
+      <p>非公式のクイズアプリであり、Wikimedia Foundationとは関係ありません。</p>
+    </footer>
+  </div>
+
+  <template id="loading-template">
+    <section class="panel loading-panel">
+      <div class="spinner" aria-hidden="true"></div>
+      <p>Wikipediaを探索中…</p>
+      <small>良問になりそうな記事だけを選別しています。</small>
+    </section>
+  </template>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
