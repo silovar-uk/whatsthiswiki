@@ -27,8 +27,22 @@ export function shuffle(items, random = Math.random) {
 export function scoreAnswer({ correct, mode, elapsedMs }) {
   if (!correct) return 0;
   if (mode === 'choice') return 350;
+
   const seconds = Math.floor(Math.max(0, elapsedMs) / 1000);
+  if (mode === 'initial') {
+    return 650 + Math.max(0, 250 - seconds * 5);
+  }
   return 1000 + Math.max(0, 500 - seconds * 10);
+}
+
+export function getInitialCharacter(value = '') {
+  const source = String(value).trim();
+  if (!source) return '';
+  if (typeof Intl?.Segmenter === 'function') {
+    const segmenter = new Intl.Segmenter('ja', { granularity: 'grapheme' });
+    return segmenter.segment(source)[Symbol.iterator]().next().value?.segment || '';
+  }
+  return Array.from(source)[0] || '';
 }
 
 export function formatDuration(ms) {
@@ -133,7 +147,7 @@ export async function encodeChallenge(challenge, { forcePlain = false } = {}) {
     try {
       return `g.${bytesToBase64Url(await gzip(bytes))}`;
     } catch {
-      // Compression is an optimization. Fall back to plain JSON when unavailable.
+      // Compression is optional. Fall back to plain JSON.
     }
   }
   return `j.${bytesToBase64Url(bytes)}`;
