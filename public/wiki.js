@@ -20,6 +20,10 @@ const CATEGORY_ROOTS = {
   science: ['科学'],
   sports: ['スポーツ']
 };
+const FALLBACK_DISTRACTORS = [
+  'おにぎり', 'モアイ', '折り紙', '富士山', '将棋', 'ラーメン', '東京タワー', 'サッカーボール',
+  'カレーライス', '敗者復活戦', '自動販売機', '紙飛行機', '万華鏡', '縄跳び', '温泉', '花火'
+];
 
 function apiUrl(params) {
   const url = new URL(API_URL);
@@ -46,6 +50,7 @@ async function fetchJson(url, timeoutMs = 15000) {
 }
 
 function stripHtml(value = '') {
+  if (typeof document === 'undefined') return String(value).replace(/<[^>]*>/g, '').trim();
   const element = document.createElement('textarea');
   element.innerHTML = String(value).replace(/<[^>]*>/g, '');
   return element.value.trim();
@@ -114,10 +119,7 @@ function evaluateCandidate(page, parse, requestedCategory) {
 }
 
 async function fetchPagePool(category, limit = 35) {
-  const common = {
-    prop: 'info|pageprops',
-    inprop: 'url'
-  };
+  const common = { prop: 'info|pageprops', inprop: 'url' };
   if (category && category !== 'all') {
     const roots = CATEGORY_ROOTS[category] || CATEGORY_ROOTS.science;
     const root = shuffle(roots)[0];
@@ -141,24 +143,25 @@ async function fetchPagePool(category, limit = 35) {
   return Object.values(data.query?.pages || {});
 }
 
-async function parsePage(page) {
-  if (page.pageprops?.disambiguation !== undefined) return null;
+async function parsePage(pageOrTitle) {
+  const pageId = typeof pageOrTitle === 'object' ? pageOrTitle.pageid : null;
+  const pageTitle = typeof pageOrTitle === 'string' ? pageOrTitle : null;
+  if (typeof pageOrTitle === 'object' && pageOrTitle.pageprops?.disambiguation !== undefined) return null;
+
   const url = new URL(API_URL);
-  Object.entries({
+  const params = {
     action: 'parse',
-    pageid: page.pageid,
     prop: 'tocdata|sections|revid|categories',
     format: 'json',
     formatversion: '2',
     redirects: '1',
     origin: '*'
-  }).forEach(([key, value]) => url.searchParams.set(key, value));
-  try {
-    const data = await fetchJson(url);
-    return data.parse || null;
-  } catch {
-    return null;
-  }
+  };
+  if (pageId) params.pageid = pageId;
+  else params.page = pageTitle;
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  const data = await fetchJson(url);
+  return data.parse || null;
 }
 
 async function mapWithConcurrency(items, limit, mapper) {
@@ -189,12 +192,106 @@ async function addAliases(questions) {
   }));
 }
 
-function buildChoices(selected, distractorPool) {
-  const allTitles = [...new Set([...selected, ...distractorPool].map((question) => question.title))];
+function buildChoices(selected, distractorPool = []) {
+  const allTitles = [...new Set([
+    ...selected.map((question) => question.title),
+    ...distractorPool.map((question) => question.title),
+    ...FALLBACK_DISTRACTORS
+  ])];
   return selected.map((question) => {
     const distractors = shuffle(allTitles.filter((title) => title !== question.title)).slice(0, 3);
     return { ...question, choices: shuffle([question.title, ...distractors]) };
   });
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function maskAnswerInSections(sections, answers) {
+  const targets = [...new Set(answers.filter((answer) => String(answer).trim().length >= 2))]
+    .sort((a, b) => b.length - a.length);
+  return sections.map((section) => {
+    let text = section.text;
+    targets.forEach((target) => {
+      text = text.replace(new RegExp(escapeRegExp(target), 'gi'), '〇〇');
+    });
+    return { ...section, text };
+  });
+}
+
+export function extractWikipediaTitle(input) {
+  let url;
+  try {
+    url = new URL(String(input).trim());
+  } catch {
+    throw new Error('WikipediaのURLとして読み取れません。');
+  }
+  const host = url.hostname.toLowerCase();
+  if (!['ja.wikipedia.org', 'ja.m.wikipedia.org'].includes(host)) {
+    throw new Error('日本語版WikipediaのURLを入力してください。');
+  }
+
+  let rawTitle = '';
+  if (url.pathname.startsWith('/wiki/')) {
+    rawTitle = url.pathname.slice('/wiki/'.length);
+  } else if (url.pathname === '/w/index.php') {
+    rawTitle = url.searchParams.get('title') || '';
+  }
+  if (!rawTitle) throw new Error('記事ページのURLを入力してください。');
+
+  try {
+    const title = decodeURIComponent(rawTitle).replace(/_/g, ' ').trim();
+    if (!title) throw new Error();
+    return title;
+  } catch {
+    throw new Error('記事名をURLから読み取れません。');
+  }
+}
+
+export async function createQuestionsFromUrls({ urls, onProgress = () => {} } = {}) {
+  const inputs = [...new Set((urls || []).map((value) => String(value).trim()).filter(Boolean))];
+  if (inputs.length < 1 || inputs.length > 10) {
+    throw new Error('WikipediaのURLを1〜10件入力してください。');
+  }
+
+  const titles = inputs.map((input, index) => {
+    try {
+      return extractWikipediaTitle(input);
+    } catch (error) {
+      throw new Error(`${index + 1}件目：${error.message}`);
+    }
+  });
+
+  const parsed = await mapWithConcurrency(titles, 3, async (title, index) => {
+    onProgress(`${index + 1}/${titles.length}件を読み込み中…`);
+    try {
+      const page = await parsePage(title);
+      if (!page) throw new Error('記事を取得できませんでした。');
+      const sections = parseSections(page);
+      if (!sections.length) throw new Error('目次がない記事です。');
+      return {
+        id: `custom-${page.pageid || index + 1}`,
+        title: page.title || title,
+        aliases: [],
+        category: 'custom',
+        difficulty: 'normal',
+        quality: 1,
+        revisionId: page.revid || null,
+        sourceUrl: `https://ja.wikipedia.org/wiki/${encodeURIComponent((page.title || title).replace(/ /g, '_'))}`,
+        sections
+      };
+    } catch (error) {
+      throw new Error(`${index + 1}件目「${title}」：${error.message}`);
+    }
+  });
+
+  const withAliases = await addAliases(parsed);
+  const masked = withAliases.map((question) => ({
+    ...question,
+    sections: maskAnswerInSections(question.sections, [question.title, ...question.aliases])
+  }));
+  return buildChoices(masked);
 }
 
 export async function discoverQuestions({
@@ -213,8 +310,12 @@ export async function discoverQuestions({
     const pages = pool.filter((page) => page.pageid && !accepted.has(page.title)).slice(0, 22);
     const parsed = await mapWithConcurrency(pages, 4, async (page) => {
       attempted += 1;
-      const parse = await parsePage(page);
-      return parse ? evaluateCandidate(page, parse, category) : null;
+      try {
+        const parse = await parsePage(page);
+        return parse ? evaluateCandidate(page, parse, category) : null;
+      } catch {
+        return null;
+      }
     });
     parsed.filter(Boolean).forEach((question) => accepted.set(question.title, question));
   }
@@ -226,7 +327,7 @@ export async function discoverQuestions({
   }
   const minimumPool = Math.max(target, 4);
   if (candidates.length < minimumPool) {
-    throw new Error(`良問を${target}問そろえられませんでした（${attempted}記事を確認）。条件を変えて再試行してください。`);
+    throw new Error(`問題を${target}問そろえられませんでした（${attempted}記事を確認）。条件を変えて再試行してください。`);
   }
 
   const selected = shuffle(candidates.slice(0, Math.max(target + 3, target))).slice(0, target);
