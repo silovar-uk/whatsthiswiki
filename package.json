@@ -1,11 +1,11 @@
 {
   "name": "whatsthiswiki",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "python3 -m http.server 4173 --directory public",
-    "check": "node --check public/app.js && node --check public/gags.js && node --check public/wiki.js && node --check public/utils.js && node --check public/questions.js",
+    "check": "node --check public/app.js && node --check public/wiki.js && node --check public/utils.js && node --check public/questions.js",
     "test": "node --test"
   }
 }
