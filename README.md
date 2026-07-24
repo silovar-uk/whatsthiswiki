@@ -1,149 +1,108 @@
 # What's This Wiki?
 
-Wikipediaの記事を、目次だけで当てる非同期チャレンジ型クイズです。
+Wikipediaの記事を、目次だけで当てるライトなクイズアプリです。
 
+- ログインなし
+- ニックネーム入力なし
+- DBなし
+- URLを開いてすぐ遊べる
 - まず自由入力で回答
 - 自分でギブアップした場合だけ4択を表示
-- 同じ問題セットをURLで共有
-- 得点・正答数・回答時間でランキング
-- 通常は人が確認した問題を使用
-- 「Wikipedia探索（実験）」では、その場でランダム記事を取得・選別
+- 問題・順番・選択肢が同じ共有URLを発行
+- 結果は画面表示と端末内ベスト記録のみ
 
-## 現在の実装範囲
+## 公開URL
 
-### 遊ぶ
+GitHub Pagesを有効化すると、以下で公開されます。
 
-- 確認済み問題から5問／10問を生成
-- Wikipedia全体からランダム探索
-- ジャンル指定探索（食べ物・人物・作品・場所・科学）
-- 難易度選択
-- 自由入力の表記揺れ判定
-- ギブアップ後のみ4択を解放
-- 結果・ランキング保存
-- Web Share API／クリップボード共有
-- チャレンジURL向けOGP文言の差し替え
-
-### 問題品質
-
-実験モードでは、取得した記事を次の条件で自動選別します。
-
-- 本文名前空間のみ
-- リダイレクト除外
-- 一定以上の記事サイズ
-- 目次4〜22項目
-- 曖昧さ回避・一覧系・年号記事を除外
-- 見出し内に答えが露出する記事を除外
-- 汎用見出しだけの記事を除外
-- 一部の要注意カテゴリを除外
-- 目次数・固有見出し率・タイトル長から品質と難易度を推定
-
-## 技術構成
-
-- フロントエンド：HTML / CSS / Vanilla JavaScript
-- API：Cloudflare Workers
-- DB：Cloudflare D1
-- 静的配信：Cloudflare Workers Static Assets
-- 記事取得：MediaWiki Action API
-
-Reactなどのランタイム依存を持たせず、初期検証と保守を軽くしています。
-
-## セットアップ
-
-### 1. 依存関係
-
-```bash
-npm install
+```text
+https://silovar-uk.github.io/whatsthiswiki/
 ```
 
-### 2. D1を作成
+## 構成
 
-```bash
-npx wrangler d1 create whatsthiswiki
+```text
+public/
+  index.html      画面の土台
+  app.js          ゲーム進行・共有・UI
+  questions.js    確認済み問題
+  wiki.js         Wikipedia探索・品質判定
+  utils.js        正規化・採点・共有URL圧縮
+  styles.css      レスポンシブUI
+
+test/
+  static.test.mjs
+
+.github/workflows/
+  pages.yml       GitHub Pagesへの自動公開
+  ci.yml          構文チェックとテスト
 ```
 
-表示された`database_id`を`wrangler.toml`へ設定します。
+## ローカル起動
 
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "whatsthiswiki"
-database_id = "ここを実際のIDに置換"
-migrations_dir = "migrations"
-```
-
-### 3. ローカルDBを初期化
-
-```bash
-npm run db:migrate:local
-```
-
-### 4. 開発サーバー
+外部パッケージは不要です。
 
 ```bash
 npm run dev
 ```
 
-### 5. 本番DBとデプロイ
+その後、以下を開きます。
 
-```bash
-npm run db:migrate:remote
-npm run deploy
+```text
+http://localhost:4173
 ```
 
-## テスト
+## チェック
 
 ```bash
+npm run check
 npm test
 ```
 
-現状は回答文字列の正規化をテストしています。
+## 遊び方
 
-- 全角・半角
-- 大文字・小文字
-- 空白・記号
-- カタカナ・ひらがな
+1. 確認済み問題、またはWikipedia探索を選ぶ
+2. ジャンル・難易度・問題数を選ぶ
+3. 目次だけを見て自由入力で回答する
+4. 分からない場合は、自分でギブアップして4択を開く
+5. 結果画面から同じ問題を友達に送る
 
-## 主なAPI
+## 共有の仕組み
+
+サーバーやDBには保存しません。問題セットをJSONにし、対応ブラウザではgzip圧縮してURLのフラグメントへ格納します。
 
 ```text
-POST /api/challenges
-GET  /api/challenges/:challengeId
-POST /api/challenges/:challengeId/plays
-GET  /api/challenges/:challengeId/leaderboard
-GET  /api/plays/:playId
-POST /api/plays/:playId/questions/:questionId/give-up
-POST /api/plays/:playId/questions/:questionId/answer
-POST /api/plays/:playId/finish
+https://silovar-uk.github.io/whatsthiswiki/#challenge=...
 ```
 
-## 回答ルール
+フラグメントはWebサーバーへ送信されません。同じURLを開くと、問題・順番・4択を復元します。
 
-- 自由入力は1問につき1回
-- 自由入力前に限り、本人がギブアップできる
-- ギブアップAPIを実行したプレイだけ4択回答を受け付ける
-- 時間経過による自動4択表示はしない
-- 自由入力正解：1,000点＋最大500点の速度ボーナス
-- 4択正解：350点
-- 不正解：0点
+共有URLには正解データも含まれるため、本格的な不正対策には向きません。友達同士でライトに遊ぶ用途を前提にしています。
 
-## 注意点
+## Wikipedia探索
 
-- 自動生成問題は、確認済み問題より品質が不安定です。
-- 初期の要注意カテゴリ除外はキーワードベースで、完全ではありません。
-- チャレンジの有効期限は14日です。
-- Wikipediaの記事は更新されるため、確認済み問題も定期的な再確認が必要です。
-- Wikipedia由来の内容は、回答後に元記事へのリンクを表示します。
-- 本アプリはWikimedia FoundationおよびQuizKnockの公式サービスではありません。
+Wikipedia探索はMediaWiki Action APIへブラウザから直接アクセスします。
 
-## 次に進める項目
+候補記事について、次を確認します。
 
-1. 管理画面からWikipedia URLを取り込み
-2. 目次の編集・答えマスク・別名登録
-3. 下書き／承認／却下ワークフロー
-4. 問題ごとの正答率・ギブアップ率集計
-5. プレイデータから難易度を自動補正
-6. 不適切記事フィルターの強化
-7. OGP画像の動的生成
-8. 連投・ランキング荒らし対策
+- 本文名前空間の記事
+- 曖昧さ回避を除外
+- 目次4〜22項目
+- 見出しに記事名が露出していない
+- 汎用見出しだけではない
+- 一覧・年号記事を除外
+- 一部の要注意カテゴリを除外
 
-詳しい設計は[`ARCHITECTURE.md`](./ARCHITECTURE.md)を参照してください。
+探索結果は自動判定のため、確認済み問題より品質が不安定です。
+
+## GitHub Pages
+
+`main`へpushすると、`.github/workflows/pages.yml`が`public`フォルダを公開します。
+
+初回のみ、リポジトリの **Settings → Pages → Source** が **GitHub Actions** になっていることを確認してください。
+
+## 権利・表示
+
+- 回答後にWikipediaの元記事へのリンクを表示
+- Wikipedia由来の情報を利用
+- Wikimedia FoundationおよびQuizKnockの公式サービスではありません

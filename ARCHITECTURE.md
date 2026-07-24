@@ -1,285 +1,242 @@
-# What's This Wiki? コードレベル設計
+# What's This Wiki? ライト版設計
 
-## 1. プロダクト方針
+## 1. 方針
 
-初期版はリアルタイム対戦ではなく、同じ問題セットをURLで共有する非同期チャレンジ型とする。
+最優先は、説明や登録を挟まずに遊べること。
 
 ```text
-作成者が条件を選ぶ
+トップを開く
   ↓
-サーバーが問題セットを固定
+条件を選ぶ
   ↓
-challengeIdを含むURLを発行
+すぐ出題
   ↓
-各参加者が別々の時刻にプレイ
+結果を表示
   ↓
-結果を同じランキングへ保存
+同じ問題のURLを共有
 ```
 
-問題の出どころは二系統。
+削除したもの。
 
 ```text
-curated
-  人が確認・承認したquestion_bankから生成
-
-experimental
-  MediaWiki APIから記事を探索し、自動品質判定を通過した記事から生成
+ログイン
+アカウント
+ニックネーム
+共通ランキング
+サーバーへのプレイ保存
+Cloudflare Workers
+D1
 ```
 
-## 2. ディレクトリ
+残すもの。
 
 ```text
-public/
-  index.html       SPAシェル、OGPメタ
-  app.js           画面描画、ルーティング、API呼び出し
-  styles.css       レスポンシブUI
-
-worker/
-  index.js         APIルーティング、D1操作、採点、OGP差し替え
-  wiki.js          Wikipedia取得、候補評価、問題セット生成
-  utils.js         回答正規化、ID生成、JSON補助
-
-migrations/
-  0001_init.sql    テーブル・初期確認済み問題10問
-
-test/
-  normalize.test.mjs
+確認済み問題
+Wikipediaランダム探索
+自由入力
+本人のギブアップ後だけ4択
+端末内ベスト記録
+同一問題URL共有
 ```
 
-## 3. データモデル
-
-### question_bank
-
-人が確認した問題。
+## 2. 完全静的構成
 
 ```text
-id
-answer title
-aliases_json
-sections_json
-source_url
-revision_id
-category
-difficulty
-quality_score
-review_status
-reviewed_at
+GitHub Pages
+  ├─ HTML
+  ├─ CSS
+  └─ JavaScript
+       ├─ 確認済み問題JSON
+       ├─ MediaWiki APIへの直接通信
+       ├─ ゲーム状態
+       └─ localStorage
 ```
 
-### challenges
+独自APIとDBを持たない。GitHub Pagesから配信できるため、運用対象は静的ファイルのみ。
 
-共有単位。生成後は問題順と選択肢を固定する。
+## 3. 共有URL
+
+問題セットを次の形で短縮する。
+
+```js
+{
+  v: 1,
+  s: "curated",
+  c: "all",
+  d: "mixed",
+  q: [
+    {
+      t: "記事名",
+      a: ["別名"],
+      h: [{ level: 1, text: "見出し" }],
+      o: ["選択肢1", "選択肢2", "選択肢3", "選択肢4"],
+      u: "元記事URL",
+      r: 123456,
+      d: "normal"
+    }
+  ]
+}
+```
+
+処理順。
 
 ```text
-id
-question_source: curated | experimental
-source_mode: random | category
-category
-difficulty
-question_count
-created_at
-expires_at
+JSON化
+  ↓
+CompressionStream対応ブラウザ：gzip
+非対応ブラウザ：そのままUTF-8
+  ↓
+Base64URL
+  ↓
+#challenge=... に格納
 ```
 
-### challenge_questions
+URLフラグメントを使うため、共有データはGitHub Pagesのサーバーへ送信されない。
 
-チャレンジにコピーされた問題のスナップショット。
-Wikipedia側が更新されても、進行中チャレンジの内容は変わらない。
+ただし、暗号化ではない。URLを解析すれば正解を確認できるため、競技性より手軽さを優先した設計。
 
-### plays
+## 4. ゲーム状態
 
-参加者1人の挑戦。
+ゲーム中だけメモリに保持する。
 
-### play_question_states
+```js
+{
+  challenge,
+  encoded,
+  shareUrl,
+  index,
+  answers,
+  startedAt,
+  questionStartedAt,
+  resolved,
+  gaveUp
+}
+```
 
-問題ごとの状態。
+ページを再読み込みした場合は、共有URLの問題セットを最初から遊び直す。
+
+## 5. 回答ルール
 
 ```text
-gave_up
-answered_at
-mode: text | choice
-submitted_answer
-is_correct
-score
-elapsed_ms
+自由入力：1回
+正解：1,000点＋速度ボーナス最大500点
+不正解：0点
 ```
 
-`gave_up`をDBに持つことで、フロントの表示だけでなくAPI側でも以下を強制する。
+ギブアップは明示的な2段階操作。
 
 ```text
-text回答: gave_up = 0 の時だけ受付
-choice回答: gave_up = 1 の時だけ受付
-回答済み: 以後の回答を拒否
+「わからないのでギブアップ」
+  ↓
+注意文を表示
+  ↓
+「4択を見る」
 ```
 
-### results
-
-完了したプレイの集計。ランキングは以下で並べる。
-
-```sql
-ORDER BY score DESC, total_time_ms ASC, created_at ASC
-```
-
-## 4. 問題生成
-
-### curated
-
-1. `review_status = approved`を取得
-2. 指定難易度で不足する場合は全難易度へフォールバック
-3. ランダムに必要数を抽出
-4. 同じ候補群から誤答3件を選ぶ
-5. チャレンジへスナップショット保存
-
-### experimental
-
-1. Wikipediaから候補タイトルを取得
-2. `pageprops`を一括取得し曖昧さ回避を除外
-3. `action=parse&prop=tocdata|revid|categories`で目次取得
-4. 最大5並列で解析
-5. 品質フィルター
-6. 候補決定後、リダイレクト名を一括取得
-7. 問題セット生成
-
-外部サブリクエスト数を抑えるため、1生成あたり最大40記事を解析する。
-
-## 5. 自動品質判定
+4択を開いた後は自由入力に戻れない。
 
 ```text
-除外
-- 目次4未満、22超
-- 一覧・曖昧さ回避・年号記事
-- 見出しに記事タイトルが露出
-- 固有見出しが2件未満
-- 汎用見出し率が高すぎる
-- 要注意カテゴリキーワードに一致
-
-加点
-- 固有見出し比率
-- 6〜12前後の適度な目次数
-- 適度なタイトル長
+4択正解：350点
+4択不正解：0点
 ```
 
-難易度推定は暫定ルール。運用後は下記実績へ置き換える。
+## 6. 表記揺れ
 
-```text
-正答率
-自由入力正答率
-ギブアップ率
-平均回答時間
-スキップ・離脱率
-```
-
-## 6. 回答正規化
-
-`normalizeAnswer()`で以下を統一する。
+`normalizeAnswer()`で次を統一する。
 
 ```text
 Unicode NFKC
-英字の小文字化
+英字の大文字・小文字
 全角・半角
 空白
-一般的な句読点・括弧・中黒
-カタカナ→ひらがな
+一般的な記号
+カタカナ・ひらがな
 ```
 
-正解判定は正答タイトルとリダイレクト由来の別名を完全一致比較する。
-あいまいな部分一致は誤判定を増やすため採用しない。
+正解タイトルと登録済み別名に対して完全一致判定する。部分一致は誤判定を避けるため使用しない。
 
-## 7. 採点
+Wikipedia探索では、選ばれた記事へのリダイレクト名を別名として取得する。
 
-```js
-if (!isCorrect) return 0;
-if (mode === 'choice') return 350;
+## 7. Wikipedia探索
 
-const seconds = Math.floor(elapsedMs / 1000);
-const speedBonus = Math.max(0, 500 - seconds * 10);
-return 1000 + speedBonus;
-```
-
-時間切れは設けない。経過時間は速度ボーナスと順位の補助にのみ使う。
-
-## 8. 共有
-
-共有URLには`challengeId`だけを含める。
+### 全体ランダム
 
 ```text
-/challenge/c_xxxxxxxxxxxx
+generator=random
+namespace=0
 ```
 
-正解・問題JSON・選択肢をURLへ埋め込まない。
-
-チャレンジURLへアクセスした場合、WorkerがHTMLRewriterで以下を変更する。
+### ジャンル指定
 
 ```text
-title
-og:title
-og:description
-og:url
+generator=categorymembers
+Category:食品 / 人物 / 作品 / 地理 / 科学 / スポーツ
+namespace=0
 ```
 
-問題や正解はOGPへ出さない。
+候補記事を取得後、`action=parse`の`tocdata`を使用する。互換性のため、旧`sections`もフォールバックとして受け取る。
 
-## 9. セキュリティ・不正対策
+### 品質フィルター
 
-現状のMVPで実施済み。
+除外。
 
 ```text
-回答の二重送信防止
-ギブアップ状態のサーバー検証
-回答モードのサーバー検証
-ニックネーム長制限
-チャレンジ有効期限
-SQLバインド
-HTMLエスケープ
+曖昧さ回避
+一覧・年号記事
+目次4未満または22超
+見出しに記事タイトルが含まれる
+固有見出しが2件未満
+汎用見出し率が高い
+要注意カテゴリキーワード
 ```
 
-次の段階で必要。
+評価。
 
 ```text
-IP・playId単位のレート制限
-同一端末のランキング連投抑止
-管理API認証
-CSRFを考慮した管理画面
-NGワード
-通報・非表示
+固有見出し率
+目次数
+タイトル長
 ```
 
-## 10. 開発順
+実験モードは最大3ラウンド、1ラウンド最大22記事、同時通信4件に抑える。
 
-### Phase 1：今回
+## 8. 保存
 
-- 確認済み問題
-- Wikipedia探索実験
-- 自由入力
-- 本人ギブアップ後の4択
-- 非同期共有
-- ランキング
+結果全体や履歴は保存しない。
 
-### Phase 2：問題管理
+同じ共有問題におけるベスト記録だけ`localStorage`へ保存する。
 
-- Wikipedia URL取り込み
-- 目次編集
-- 見出し内の答えマスク
-- 別名編集
-- 難易度設定
-- 承認フロー
-- revision差分警告
+```text
+whatsthiswiki:best:<共有データのハッシュ>
+```
 
-### Phase 3：運用改善
+保存内容。
 
-- 問題別統計
-- 品質スコア再学習
-- カテゴリ精度改善
-- 問題通報
-- ランキング不正対策
-- 動的OGP画像
+```text
+score
+correctCount
+giveUps
+elapsedMs
+savedAt
+```
 
-### Phase 4：リアルタイム
+## 9. エラー時
 
-非同期版の利用が定着した場合のみ検討。
+- Wikipedia API失敗：条件選択へ戻す
+- 良問不足：条件変更を促す
+- 共有URL破損：トップへ戻す
+- gzip非対応：プレーン共有を生成
+- クリップボード非対応：URLを選択できるダイアログを表示
 
-- Durable Objects
-- WebSocket
-- 早押し順のサーバー確定
-- 再接続
-- ホスト移譲
+## 10. 今後の改善
+
+ライトさを崩さない範囲に限定する。
+
+```text
+確認済み問題の追加
+問題URLを手動登録するローカル編集ツール
+共有結果画像の生成
+Wikipedia探索のカテゴリ改善
+問題ごとの「微妙だった」端末内フィードバック
+PWA対応
+```
