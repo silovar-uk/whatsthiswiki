@@ -1,5 +1,5 @@
 import { CURATED_QUESTIONS } from './questions.js';
-import { discoverQuestions } from './wiki.js';
+import { createQuestionsFromUrls, discoverQuestions } from './wiki.js';
 import {
   buildChallengeUrl,
   decodeChallenge,
@@ -7,6 +7,7 @@ import {
   escapeHtml,
   formatDuration,
   getChallengeFromHash,
+  getInitialCharacter,
   hashString,
   isCorrectAnswer,
   saveBestScore,
@@ -20,9 +21,21 @@ const loadingTemplate = document.querySelector('#loading-template');
 
 const LABELS = {
   categories: {
-    all: 'すべて', food: '食べ物', people: '人物', works: '作品', places: '場所', science: '科学', sports: 'スポーツ'
+    all: 'すべて',
+    food: '食べ物',
+    people: '人物',
+    works: '作品',
+    places: '場所',
+    science: '科学',
+    sports: 'スポーツ',
+    custom: 'オリジナル'
   },
-  difficulties: { easy: 'やさしい', normal: 'ふつう', hard: 'むずかしい', mixed: 'まぜこぜ' }
+  difficulties: {
+    easy: 'やさしい',
+    normal: 'ふつう',
+    hard: 'むずかしい',
+    mixed: 'まぜこぜ'
+  }
 };
 
 const state = {
@@ -34,7 +47,7 @@ const state = {
   startedAt: 0,
   questionStartedAt: 0,
   resolved: false,
-  gaveUp: false
+  hintMode: 'none'
 };
 
 function clearState() {
@@ -47,7 +60,7 @@ function clearState() {
     startedAt: 0,
     questionStartedAt: 0,
     resolved: false,
-    gaveUp: false
+    hintMode: 'none'
   });
 }
 
@@ -69,7 +82,7 @@ function showToast(message) {
   }, 1800);
 }
 
-function setLoading(message = 'Wikipediaを探索中…') {
+function setLoading(message = '問題を準備しています…') {
   app.replaceChildren(loadingTemplate.content.cloneNode(true));
   const target = app.querySelector('[data-loading-message]');
   if (target) target.textContent = message;
@@ -78,6 +91,15 @@ function setLoading(message = 'Wikipediaを探索中…') {
 function updateLoading(message) {
   const target = app.querySelector('[data-loading-message]');
   if (target) target.textContent = message;
+}
+
+function parseCustomUrls(value) {
+  return [...new Set(
+    String(value || '')
+      .split(/[\n,\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+  )];
 }
 
 function buildCuratedQuestions({ category, difficulty, count }) {
@@ -109,70 +131,98 @@ function renderHome() {
     <section class="hero">
       <p class="eyebrow">OPEN. GUESS. SHARE.</p>
       <h1>目次だけで、<br><em>何の記事？</em></h1>
-      <p class="hero-copy">ログインなし。Wikipediaの記事を目次だけで当てる、ちょっと変なクイズ。</p>
+      <p class="hero-copy">Wikipediaの記事を、目次だけで当てるクイズです。ログインなしで遊べます。</p>
     </section>
 
     <section class="panel setup-panel">
       <form id="setup-form">
         <fieldset>
-          <legend>問題の探し方</legend>
+          <legend>問題の作り方</legend>
           <div class="segmented">
             <label><input type="radio" name="source" value="curated" checked><span>確認済み問題</span></label>
             <label><input type="radio" name="source" value="experimental"><span>Wikipedia探索 <small>実験</small></span></label>
+            <label><input type="radio" name="source" value="custom"><span>URLから作る</span></label>
           </div>
           <p id="source-note" class="field-note">遊びやすさを確認した問題から出題します。</p>
         </fieldset>
 
-        <div class="field-grid">
-          <label class="field">
-            <span>ジャンル</span>
-            <select name="category">
-              ${Object.entries(LABELS.categories).map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}
-            </select>
-          </label>
-          <label class="field">
-            <span>難易度</span>
-            <select name="difficulty">
-              <option value="mixed">まぜこぜ</option>
-              <option value="easy">やさしい</option>
-              <option value="normal">ふつう</option>
-              <option value="hard">むずかしい</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>問題数</span>
-            <select id="question-count" name="count">
-              <option value="5">5問</option>
-              <option value="10">10問</option>
-            </select>
-          </label>
+        <div id="standard-settings" class="source-details">
+          <div class="field-grid">
+            <label class="field">
+              <span>ジャンル</span>
+              <select name="category">
+                ${Object.entries(LABELS.categories)
+                  .filter(([value]) => value !== 'custom')
+                  .map(([value, label]) => `<option value="${value}">${label}</option>`)
+                  .join('')}
+              </select>
+            </label>
+            <label class="field">
+              <span>難易度</span>
+              <select name="difficulty">
+                <option value="mixed">まぜこぜ</option>
+                <option value="easy">やさしい</option>
+                <option value="normal">ふつう</option>
+                <option value="hard">むずかしい</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>問題数</span>
+              <select id="question-count" name="count">
+                <option value="5">5問</option>
+                <option value="10">10問</option>
+              </select>
+            </label>
+          </div>
         </div>
 
-        <button class="button button-primary button-large" type="submit">すぐ遊ぶ <span aria-hidden="true">→</span></button>
+        <section id="custom-settings" class="custom-settings is-hidden">
+          <label for="custom-urls">
+            <span>日本語版Wikipediaの記事URL</span>
+            <textarea id="custom-urls" name="customUrls" placeholder="https://ja.wikipedia.org/wiki/富士山&#10;https://ja.wikipedia.org/wiki/東京タワー"></textarea>
+          </label>
+          <small>1行に1件、1〜10件まで入力できます。1件だけなら1問のクイズになります。</small>
+        </section>
+
+        <button id="setup-submit" class="button button-primary button-large" type="submit">すぐ遊ぶ <span aria-hidden="true">→</span></button>
       </form>
     </section>
 
     <section class="how-to">
       <article><strong>01</strong><span>目次を見る</span></article>
-      <article><strong>02</strong><span>自由入力で答える</span></article>
-      <article><strong>03</strong><span>無理なら自分でギブアップ</span></article>
-      <article><strong>04</strong><span>同じ問題を友達へ送る</span></article>
+      <article><strong>02</strong><span>記事名を入力する</span></article>
+      <article><strong>03</strong><span>必要ならヒントを使う</span></article>
+      <article><strong>04</strong><span>同じ問題を共有する</span></article>
     </section>
   `;
 
   const form = document.querySelector('#setup-form');
   const sourceNote = document.querySelector('#source-note');
   const countSelect = document.querySelector('#question-count');
+  const standardSettings = document.querySelector('#standard-settings');
+  const customSettings = document.querySelector('#custom-settings');
+  const submitButton = document.querySelector('#setup-submit');
 
   form.addEventListener('change', (event) => {
     if (event.target.name !== 'source') return;
-    const experimental = event.target.value === 'experimental';
-    sourceNote.textContent = experimental
-      ? 'Wikipediaをその場で探索します。記事によっては難問・珍問になります。'
-      : '遊びやすさを確認した問題から出題します。';
-    countSelect.innerHTML = experimental
-      ? '<option value="3">3問</option><option value="5" selected>5問</option>'
-      : '<option value="5">5問</option><option value="10">10問</option>';
+    const source = event.target.value;
+    const isCustom = source === 'custom';
+    standardSettings.classList.toggle('is-hidden', isCustom);
+    customSettings.classList.toggle('is-hidden', !isCustom);
+
+    if (source === 'experimental') {
+      sourceNote.textContent = 'Wikipediaをその場で探索し、目次がクイズに向く記事を選びます。';
+      countSelect.innerHTML = '<option value="3">3問</option><option value="5" selected>5問</option>';
+      submitButton.innerHTML = 'すぐ遊ぶ <span aria-hidden="true">→</span>';
+    } else if (source === 'custom') {
+      sourceNote.textContent = '入力した記事URLから、オリジナルの問題セットを作ります。';
+      submitButton.innerHTML = '問題を作る <span aria-hidden="true">→</span>';
+      setTimeout(() => document.querySelector('#custom-urls')?.focus(), 0);
+    } else {
+      sourceNote.textContent = '遊びやすさを確認した問題から出題します。';
+      countSelect.innerHTML = '<option value="5">5問</option><option value="10">10問</option>';
+      submitButton.innerHTML = 'すぐ遊ぶ <span aria-hidden="true">→</span>';
+    }
   });
 
   form.addEventListener('submit', createGameFromForm);
@@ -182,16 +232,33 @@ async function createGameFromForm(event) {
   event.preventDefault();
   const formData = new FormData(event.currentTarget);
   const settings = Object.fromEntries(formData.entries());
-  setLoading(settings.source === 'experimental' ? 'Wikipediaを探索中…' : '問題を準備中…');
 
   try {
-    const questions = settings.source === 'experimental'
-      ? await discoverQuestions({ ...settings, onProgress: updateLoading })
-      : buildCuratedQuestions(settings);
+    let questions;
+    let category = settings.category;
+    let difficulty = settings.difficulty;
+
+    if (settings.source === 'custom') {
+      const urls = parseCustomUrls(settings.customUrls);
+      if (urls.length < 1 || urls.length > 10) {
+        throw new Error('WikipediaのURLを1〜10件入力してください。');
+      }
+      setLoading(`${urls.length}件の記事を読み込んでいます…`);
+      questions = await createQuestionsFromUrls({ urls, onProgress: updateLoading });
+      category = 'custom';
+      difficulty = 'mixed';
+    } else if (settings.source === 'experimental') {
+      setLoading('Wikipediaを探索しています…');
+      questions = await discoverQuestions({ ...settings, onProgress: updateLoading });
+    } else {
+      setLoading('問題を準備しています…');
+      questions = buildCuratedQuestions(settings);
+    }
+
     const challenge = {
       source: settings.source,
-      category: settings.category,
-      difficulty: settings.difficulty,
+      category,
+      difficulty,
       questions
     };
     await prepareChallenge(challenge, { replaceHash: true });
@@ -215,20 +282,20 @@ function renderSharedIntro(challenge, encoded) {
   state.encoded = encoded;
   state.shareUrl = buildChallengeUrl(encoded);
   setHeaderShare(true);
-  document.title = `共有クイズ ${challenge.questions.length}問｜What's This Wiki?`;
+  document.title = `${challenge.questions.length}問｜What's This Wiki?`;
 
   app.innerHTML = `
     <section class="panel invite-panel">
-      <p class="eyebrow">A FRIEND SENT YOU THIS QUIZ</p>
-      <div class="invite-icon">W?</div>
-      <h1>同じ${challenge.questions.length}問に<br>挑戦しよう。</h1>
+      <p class="eyebrow">WIKIPEDIA CONTENTS QUIZ</p>
+      <div class="invite-icon"><img src="./assets/favicon.svg" alt=""></div>
+      <h1>${challenge.questions.length}問やってみる</h1>
       <dl class="challenge-summary">
         <div><dt>問題数</dt><dd>${challenge.questions.length}問</dd></div>
         <div><dt>ジャンル</dt><dd>${escapeHtml(LABELS.categories[challenge.category] || 'まぜこぜ')}</dd></div>
         <div><dt>難易度</dt><dd>${escapeHtml(LABELS.difficulties[challenge.difficulty] || 'まぜこぜ')}</dd></div>
       </dl>
-      <button id="start-shared" class="button button-primary button-large">挑戦する <span aria-hidden="true">→</span></button>
-      <button id="back-home" class="button button-text">自分で問題を選ぶ</button>
+      <button id="start-shared" class="button button-primary button-large">はじめる <span aria-hidden="true">→</span></button>
+      <button id="back-home" class="button button-text">別の問題を選ぶ</button>
     </section>
   `;
   document.querySelector('#start-shared').addEventListener('click', startGame);
@@ -258,7 +325,7 @@ function renderQuestion() {
   const question = state.challenge.questions[state.index];
   state.questionStartedAt = performance.now();
   state.resolved = false;
-  state.gaveUp = false;
+  state.hintMode = 'none';
   document.title = `${state.index + 1}/${state.challenge.questions.length}｜What's This Wiki?`;
 
   app.innerHTML = `
@@ -287,14 +354,25 @@ function renderQuestion() {
               <span class="sr-only">記事名を入力</span>
               <input id="answer-input" name="answer" maxlength="80" placeholder="記事名を入力" enterkeyhint="done" required autofocus>
             </label>
-            <button class="button button-primary" type="submit">これで回答</button>
+            <button class="button button-primary" type="submit">回答する</button>
           </form>
-          <button id="give-up" class="button button-text danger-text" type="button">わからないのでギブアップ</button>
-          <div id="give-up-confirm" class="give-up-confirm is-hidden">
-            <p>ギブアップすると自由入力には戻れず、4択の得点になります。</p>
+
+          <div class="hint-actions" aria-label="ヒント">
+            <button id="show-initial" class="hint-button" type="button">
+              <strong>最初の1文字を入れる</strong>
+              <small>正解時 最大900pt</small>
+            </button>
+            <button id="request-choices" class="hint-button" type="button">
+              <strong>4択を見る</strong>
+              <small>正解時 350pt</small>
+            </button>
+          </div>
+          <p id="hint-status" class="hint-status is-hidden"></p>
+          <div id="choice-confirm" class="choice-confirm is-hidden">
+            <p>4択を表示すると、自由入力には戻れません。</p>
             <div>
-              <button id="cancel-give-up" class="button button-quiet" type="button">まだ考える</button>
-              <button id="confirm-give-up" class="button button-danger" type="button">4択を見る</button>
+              <button id="cancel-choices" class="button button-quiet" type="button">戻る</button>
+              <button id="confirm-choices" class="button button-danger" type="button">4択を表示</button>
             </div>
           </div>
         </div>
@@ -306,23 +384,40 @@ function renderQuestion() {
   setTimeout(() => input?.focus(), 50);
   document.querySelector('#answer-form').addEventListener('submit', (event) => {
     event.preventDefault();
-    resolveAnswer({ mode: 'text', submitted: new FormData(event.currentTarget).get('answer') });
+    const mode = state.hintMode === 'initial' ? 'initial' : 'text';
+    resolveAnswer({ mode, submitted: new FormData(event.currentTarget).get('answer') });
   });
-  document.querySelector('#give-up').addEventListener('click', () => {
-    document.querySelector('#give-up-confirm').classList.remove('is-hidden');
-    document.querySelector('#give-up').classList.add('is-hidden');
+  document.querySelector('#show-initial').addEventListener('click', showInitialHint);
+  document.querySelector('#request-choices').addEventListener('click', () => {
+    document.querySelector('#choice-confirm').classList.remove('is-hidden');
+    document.querySelector('#request-choices').disabled = true;
   });
-  document.querySelector('#cancel-give-up').addEventListener('click', () => {
-    document.querySelector('#give-up-confirm').classList.add('is-hidden');
-    document.querySelector('#give-up').classList.remove('is-hidden');
+  document.querySelector('#cancel-choices').addEventListener('click', () => {
+    document.querySelector('#choice-confirm').classList.add('is-hidden');
+    document.querySelector('#request-choices').disabled = false;
     input.focus();
   });
-  document.querySelector('#confirm-give-up').addEventListener('click', showChoices);
+  document.querySelector('#confirm-choices').addEventListener('click', showChoices);
+}
+
+function showInitialHint() {
+  if (state.resolved || state.hintMode === 'initial') return;
+  const question = state.challenge.questions[state.index];
+  const input = document.querySelector('#answer-input');
+  const initial = getInitialCharacter(question.title);
+  state.hintMode = 'initial';
+  input.value = initial;
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  document.querySelector('#show-initial').disabled = true;
+  const status = document.querySelector('#hint-status');
+  status.textContent = `最初の1文字「${initial}」を入力しました。`;
+  status.classList.remove('is-hidden');
 }
 
 function showChoices() {
   if (state.resolved) return;
-  state.gaveUp = true;
+  state.hintMode = 'choice';
   const question = state.challenge.questions[state.index];
   document.querySelector('#answer-area').innerHTML = `
     <p class="answer-kicker">4択から選んでください</p>
@@ -337,6 +432,12 @@ function showChoices() {
   document.querySelectorAll('[data-choice]').forEach((button) => {
     button.addEventListener('click', () => resolveAnswer({ mode: 'choice', submitted: button.dataset.choice }));
   });
+}
+
+function modeLabel(mode) {
+  if (mode === 'choice') return '4択';
+  if (mode === 'initial') return '1文字ヒント';
+  return 'ヒントなし';
 }
 
 function resolveAnswer({ mode, submitted }) {
@@ -359,10 +460,11 @@ function resolveAnswer({ mode, submitted }) {
   document.querySelector('#answer-area').innerHTML = `
     <div class="answer-result ${correct ? 'is-correct' : 'is-wrong'}">
       <span class="result-mark">${correct ? '○' : '×'}</span>
-      <p>${correct ? '正解！' : mode === 'choice' ? '残念！' : '不正解'}</p>
+      <p>${correct ? '正解' : '不正解'}</p>
       <h2>${escapeHtml(question.title)}</h2>
       <div class="result-points">+${score.toLocaleString()} pt</div>
-      ${mode === 'text' && !correct ? `<small>あなたの回答：${escapeHtml(submitted)}</small>` : ''}
+      ${mode !== 'choice' && !correct ? `<small>あなたの回答：${escapeHtml(submitted)}</small>` : ''}
+      <small>回答方法：${modeLabel(mode)}</small>
       <a href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">Wikipediaで記事を読む ↗</a>
       <button id="next-question" class="button button-primary">
         ${state.index + 1 === state.challenge.questions.length ? '結果を見る' : '次の問題'} <span aria-hidden="true">→</span>
@@ -380,8 +482,8 @@ function renderResults() {
   const elapsedMs = performance.now() - state.startedAt;
   const score = state.answers.reduce((sum, answer) => sum + answer.score, 0);
   const correctCount = state.answers.filter((answer) => answer.correct).length;
-  const giveUps = state.answers.filter((answer) => answer.mode === 'choice').length;
-  const result = { score, correctCount, giveUps, elapsedMs, savedAt: Date.now() };
+  const hintCount = state.answers.filter((answer) => answer.mode !== 'text').length;
+  const result = { score, correctCount, hintCount, elapsedMs, savedAt: Date.now() };
   const challengeKey = hashString(state.encoded);
   const best = saveBestScore(challengeKey, result);
   const isBest = best?.score === score && best?.elapsedMs === elapsedMs;
@@ -394,14 +496,14 @@ function renderResults() {
       ${isBest ? '<p class="best-badge">この端末のベスト記録</p>' : ''}
       <div class="result-stats">
         <div><strong>${correctCount}</strong><span>正解 / ${state.challenge.questions.length}問</span></div>
-        <div><strong>${giveUps}</strong><span>ギブアップ</span></div>
+        <div><strong>${hintCount}</strong><span>ヒント使用</span></div>
         <div><strong>${formatDuration(elapsedMs)}</strong><span>回答時間</span></div>
       </div>
     </section>
 
     <section class="panel result-actions">
-      <h2>同じ問題、友達にも送る？</h2>
-      <p>問題・順番・4択まで、まったく同じ内容で遊べます。</p>
+      <h2>同じ問題を共有</h2>
+      <p>問題・順番・選択肢が同じURLを共有できます。</p>
       <button id="share-result" class="button button-primary button-large">結果とクイズを共有</button>
       <button id="retry" class="button button-quiet">同じ問題にもう一度挑戦</button>
       <button id="new-game" class="button button-text">別の問題で遊ぶ</button>
@@ -412,7 +514,7 @@ function renderResults() {
       ${state.answers.map((answer, index) => `
         <article>
           <span class="review-number">${index + 1}</span>
-          <div><strong>${escapeHtml(answer.title)}</strong><small>${answer.correct ? '正解' : '不正解'}・${answer.mode === 'choice' ? '4択' : '自由入力'}・${answer.score}pt</small></div>
+          <div><strong>${escapeHtml(answer.title)}</strong><small>${answer.correct ? '正解' : '不正解'}・${modeLabel(answer.mode)}・${answer.score}pt</small></div>
           <span class="review-mark ${answer.correct ? 'correct' : 'wrong'}">${answer.correct ? '○' : '×'}</span>
         </article>
       `).join('')}
@@ -430,8 +532,8 @@ function renderResults() {
 async function shareChallenge(result = null) {
   if (!state.shareUrl) return;
   const text = result
-    ? `Wikipedia目次クイズ：${state.challenge.questions.length}問中${result.correctCount}問正解、${result.score.toLocaleString()}点！同じ問題に挑戦してみて。`
-    : `Wikipediaの目次だけで記事を当てるクイズ。同じ${state.challenge.questions.length}問に挑戦してみて。`;
+    ? `Wikipedia目次クイズ：${state.challenge.questions.length}問中${result.correctCount}問正解、${result.score.toLocaleString()}点。同じ問題をやってみる。`
+    : `Wikipediaの目次だけで記事を当てるクイズ。${state.challenge.questions.length}問やってみる。`;
   try {
     if (navigator.share) {
       await navigator.share({ title: "What's This Wiki?", text, url: state.shareUrl });
@@ -456,9 +558,9 @@ function renderError(message, retry) {
   app.innerHTML = `
     <section class="panel error-panel">
       <span class="error-icon">!</span>
-      <h1>うまく作れませんでした</h1>
+      <h1>問題を作成できませんでした</h1>
       <p>${escapeHtml(message)}</p>
-      <button id="retry-action" class="button button-primary">条件を選び直す</button>
+      <button id="retry-action" class="button button-primary">入力画面に戻る</button>
     </section>
   `;
   document.querySelector('#retry-action').addEventListener('click', retry);
