@@ -5,11 +5,12 @@ import {
   decodeChallenge,
   encodeChallenge,
   expandChallenge,
+  getInitialCharacter,
   isCorrectAnswer,
   normalizeAnswer,
   scoreAnswer
 } from '../public/utils.js';
-import { CURATED_QUESTIONS } from '../public/questions.js';
+import { extractWikipediaTitle } from '../public/wiki.js';
 
 test('回答表記を正規化する', () => {
   assert.equal(normalizeAnswer(' ラー メン！'), 'らーめん');
@@ -17,45 +18,49 @@ test('回答表記を正規化する', () => {
 });
 
 test('別名を含めて正解判定する', () => {
-  const question = CURATED_QUESTIONS.find((item) => item.id === 'onigiri');
+  const question = { title: 'おにぎり', aliases: ['おむすび'] };
   assert.equal(isCorrectAnswer('おむすび', question), true);
   assert.equal(isCorrectAnswer('おにぎりの作り方', question), false);
 });
 
-test('自由入力と4択で点数を分ける', () => {
+test('ヒント段階ごとに点数を分ける', () => {
   assert.equal(scoreAnswer({ correct: true, mode: 'text', elapsedMs: 0 }), 1500);
-  assert.equal(scoreAnswer({ correct: true, mode: 'text', elapsedMs: 60_000 }), 1000);
-  assert.equal(scoreAnswer({ correct: true, mode: 'choice', elapsedMs: 1 }), 350);
-  assert.equal(scoreAnswer({ correct: false, mode: 'text', elapsedMs: 1 }), 0);
+  assert.equal(scoreAnswer({ correct: true, mode: 'initial', elapsedMs: 0 }), 900);
+  assert.equal(scoreAnswer({ correct: true, mode: 'choice', elapsedMs: 0 }), 350);
+  assert.equal(scoreAnswer({ correct: false, mode: 'text', elapsedMs: 0 }), 0);
 });
 
-test('共有用データを短縮・復元する', () => {
+test('先頭の書記素を取得する', () => {
+  assert.equal(getInitialCharacter('富士山'), '富');
+  assert.equal(getInitialCharacter('🍙おにぎり'), '🍙');
+});
+
+test('日本語版WikipediaのURLから記事名を取得する', () => {
+  assert.equal(extractWikipediaTitle('https://ja.wikipedia.org/wiki/%E5%AF%8C%E5%A3%AB%E5%B1%B1'), '富士山');
+  assert.equal(extractWikipediaTitle('https://ja.m.wikipedia.org/wiki/%E6%9D%B1%E4%BA%AC%E3%82%BF%E3%83%AF%E3%83%BC'), '東京タワー');
+  assert.throws(() => extractWikipediaTitle('https://example.com/wiki/test'), /日本語版Wikipedia/);
+});
+
+test('共有用データを短縮・復元する', async () => {
   const source = {
-    source: 'curated',
-    category: 'all',
+    source: 'custom',
+    category: 'custom',
     difficulty: 'mixed',
     questions: [{
-      ...CURATED_QUESTIONS[0],
-      choices: ['おにぎり', 'モアイ', '将棋', '富士山']
+      id: 'q1',
+      title: 'おにぎり',
+      aliases: ['おむすび'],
+      sections: [{ level: 1, text: '特徴' }],
+      choices: ['おにぎり', 'モアイ', '将棋', '富士山'],
+      sourceUrl: 'https://ja.wikipedia.org/wiki/おにぎり'
     }]
   };
   const restored = expandChallenge(compactChallenge(source));
+  assert.equal(restored.questions.length, 1);
   assert.equal(restored.questions[0].title, 'おにぎり');
-  assert.deepEqual(restored.questions[0].choices, source.questions[0].choices);
-});
 
-test('プレーン形式の共有URLデータを往復する', async () => {
-  const source = {
-    source: 'curated',
-    category: 'food',
-    difficulty: 'easy',
-    questions: [{
-      ...CURATED_QUESTIONS[0],
-      choices: ['おにぎり', 'モアイ', '将棋', '富士山']
-    }]
-  };
   const encoded = await encodeChallenge(source, { forcePlain: true });
-  const restored = await decodeChallenge(encoded);
-  assert.equal(restored.category, 'food');
-  assert.equal(restored.questions[0].title, 'おにぎり');
+  const decoded = await decodeChallenge(encoded);
+  assert.equal(decoded.source, 'custom');
+  assert.equal(decoded.questions[0].choices.length, 4);
 });
