@@ -222,7 +222,7 @@ document.addEventListener('click', (event) => {
   previousQuestionLabel = app.querySelector('.progress-label')?.textContent || '';
   pendingTopScroll = true;
   setTimeout(handlePendingTopScroll, 250);
-}, false);
+}, true);
 
 mobileAnswerQuery.addEventListener?.('change', () => {
   const panel = app.querySelector('.answer-panel');
