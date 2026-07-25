@@ -53,6 +53,11 @@ function countUp(el, from, to, ms = 620) {
   requestAnimationFrame(step);
 }
 
+function withTransition(fn) {
+  if (!document.startViewTransition || REDUCED_MOTION.matches) return fn();
+  return document.startViewTransition(fn);
+}
+
 const LABELS = {
   categories: {
     all: 'すべて',
@@ -335,7 +340,7 @@ function renderSharedIntro(challenge, encoded) {
   document.querySelector('#start-shared').addEventListener('click', startGame);
   document.querySelector('#back-home').addEventListener('click', () => {
     history.replaceState(null, '', location.pathname);
-    renderHome();
+    withTransition(() => renderHome());
   });
 }
 
@@ -343,12 +348,12 @@ function startGame() {
   state.index = 0;
   state.answers = [];
   state.startedAt = performance.now();
-  renderQuestion();
+  withTransition(() => renderQuestion());
 }
 
 function tocMarkup(sections) {
   return sections.map((section, index) => `
-    <li style="--depth:${Math.max(0, Number(section.level || 1) - 1)}">
+    <li style="--depth:${Math.max(0, Number(section.level || 1) - 1)}; --i:${index}">
       <span class="toc-number">${index + 1}</span>
       <span>${escapeHtml(section.text)}</span>
     </li>
@@ -402,11 +407,13 @@ function renderQuestion() {
             </button>
           </div>
           <p id="hint-status" class="hint-status is-hidden"></p>
-          <div id="choice-confirm" class="choice-confirm is-hidden">
-            <p>4択を表示すると、自由入力には戻れません。</p>
+          <div id="choice-confirm" class="choice-confirm" inert>
             <div>
-              <button id="cancel-choices" class="button button-quiet" type="button">戻る</button>
-              <button id="confirm-choices" class="button button-danger" type="button">4択を表示</button>
+              <p>4択を表示すると、自由入力には戻れません。</p>
+              <div>
+                <button id="cancel-choices" class="button button-quiet" type="button">戻る</button>
+                <button id="confirm-choices" class="button button-danger" type="button">4択を表示</button>
+              </div>
             </div>
           </div>
         </div>
@@ -427,11 +434,15 @@ function renderQuestion() {
   });
   document.querySelector('#show-initial').addEventListener('click', showInitialHint);
   document.querySelector('#request-choices').addEventListener('click', () => {
-    document.querySelector('#choice-confirm').classList.remove('is-hidden');
+    const confirmPanel = document.querySelector('#choice-confirm');
+    confirmPanel.classList.add('is-open');
+    confirmPanel.removeAttribute('inert');
     document.querySelector('#request-choices').disabled = true;
   });
   document.querySelector('#cancel-choices').addEventListener('click', () => {
-    document.querySelector('#choice-confirm').classList.add('is-hidden');
+    const confirmPanel = document.querySelector('#choice-confirm');
+    confirmPanel.classList.remove('is-open');
+    confirmPanel.setAttribute('inert', '');
     document.querySelector('#request-choices').disabled = false;
     input.focus();
   });
@@ -525,8 +536,10 @@ function resolveAnswer({ mode, submitted }) {
   nextButton.focus({ preventScroll: true });
   nextButton.addEventListener('click', () => {
     state.index += 1;
-    if (state.index >= state.challenge.questions.length) renderResults();
-    else renderQuestion();
+    withTransition(() => {
+      if (state.index >= state.challenge.questions.length) renderResults();
+      else renderQuestion();
+    });
   });
 }
 
@@ -564,7 +577,7 @@ function renderResults() {
     <section class="answer-review">
       <h2>答え合わせ</h2>
       ${state.answers.map((answer, index) => `
-        <article>
+        <article style="--i:${index}">
           <span class="review-number">${index + 1}</span>
           <div><strong>${escapeHtml(answer.title)}</strong><small>${answer.correct ? '正解' : '不正解'}・${modeLabel(answer.mode)}・${answer.score}pt</small></div>
           <span class="review-mark ${answer.correct ? 'correct' : 'wrong'}">${answer.correct ? '○' : '×'}</span>
@@ -577,7 +590,7 @@ function renderResults() {
   document.querySelector('#retry').addEventListener('click', startGame);
   document.querySelector('#new-game').addEventListener('click', () => {
     history.replaceState(null, '', location.pathname);
-    renderHome();
+    withTransition(() => renderHome());
   });
 }
 
@@ -615,20 +628,20 @@ function renderError(message, retry) {
       <button id="retry-action" class="button button-primary">入力画面に戻る</button>
     </section>
   `;
-  document.querySelector('#retry-action').addEventListener('click', retry);
+  document.querySelector('#retry-action').addEventListener('click', () => withTransition(retry));
 }
 
 async function boot() {
   headerShareButton.addEventListener('click', () => shareChallenge());
   const encoded = getChallengeFromHash();
   if (!encoded) {
-    renderHome();
+    withTransition(() => renderHome());
     return;
   }
   setLoading('共有クイズを開いています…');
   try {
     const challenge = await decodeChallenge(encoded);
-    renderSharedIntro(challenge, encoded);
+    withTransition(() => renderSharedIntro(challenge, encoded));
   } catch (error) {
     renderError(error.message, renderHome);
   }

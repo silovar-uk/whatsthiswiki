@@ -104,6 +104,17 @@
 }
 
 .choice-confirm {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s ease;
+}
+
+.choice-confirm.is-open {
+  grid-template-rows: 1fr;
+}
+
+.choice-confirm > div {
+  overflow: hidden;
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid #595955;
@@ -116,7 +127,7 @@
   line-height: 1.6;
 }
 
-.choice-confirm > div {
+.choice-confirm > div > div {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -130,7 +141,7 @@
 
 @media (max-width: 520px) {
   .hint-actions,
-  .choice-confirm > div {
+  .choice-confirm > div > div {
     grid-template-columns: 1fr;
   }
 }

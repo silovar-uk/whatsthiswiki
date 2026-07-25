@@ -444,3 +444,37 @@ body {
   20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
   60% { transform: translateX(-4px); } 80% { transform: translateX(2px); }
 }
+
+/* --- 目次の流し込み --- */
+.toc-list li {
+  animation: toc-in .34s cubic-bezier(.2,.8,.3,1) both;
+  animation-delay: calc(min(var(--i, 0), 18) * 34ms);
+}
+@keyframes toc-in { from { opacity: 0; transform: translateX(-10px); } }
+
+/* --- カード類のずらし出現 --- */
+.how-to article, .choice-button, .result-stats div {
+  animation: rise-in .4s cubic-bezier(.2,.8,.3,1) both;
+}
+.how-to article:nth-child(2), .choice-button:nth-child(2), .result-stats div:nth-child(2) { animation-delay: 60ms; }
+.how-to article:nth-child(3), .choice-button:nth-child(3), .result-stats div:nth-child(3) { animation-delay: 120ms; }
+.how-to article:nth-child(4), .choice-button:nth-child(4) { animation-delay: 180ms; }
+
+.answer-review article {
+  animation: rise-in .4s cubic-bezier(.2,.8,.3,1) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 45ms);
+}
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } }
+
+/* --- 画面遷移 --- */
+::view-transition-old(root) { animation: vt-out .22s ease both; }
+::view-transition-new(root) { animation: vt-in .28s ease both; }
+@keyframes vt-out { to { opacity: 0; transform: translateX(-16px); } }
+@keyframes vt-in  { from { opacity: 0; transform: translateX(20px); } }
+
+/* --- ボタンの押し込み --- */
+.button-primary:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--gag-black); }
+
+/* --- 読み込み中の脈動 --- */
+[data-loading-message] { animation: loading-pulse 1.6s ease-in-out infinite; }
+@keyframes loading-pulse { 50% { opacity: .45; } }
