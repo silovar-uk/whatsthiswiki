@@ -40,7 +40,7 @@
 
 @media (max-width: 800px) {
   body.has-answer-drawer .app {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   .answer-panel {
@@ -48,25 +48,25 @@
     z-index: 90;
     inset: auto 0 0 0;
     width: 100%;
-    max-height: min(72svh, 640px);
+    max-height: min(22svh, 180px);
     padding: 0 !important;
     overflow: hidden;
     border-top: 4px solid var(--red);
     background: var(--ink);
-    box-shadow: 0 -14px 36px rgba(0, 0, 0, 0.34) !important;
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.3) !important;
     transition: max-height var(--dur-base) var(--ease-out);
   }
 
   .answer-panel.is-collapsed {
-    max-height: calc(68px + env(safe-area-inset-bottom));
+    max-height: calc(58px + env(safe-area-inset-bottom));
   }
 
   .answer-drawer-toggle {
     display: flex;
     align-items: center;
     width: 100%;
-    min-height: 68px;
-    padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+    min-height: 58px;
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
     border: 0;
     border-bottom: 2px solid var(--ink);
     background: var(--yellow);
@@ -87,37 +87,37 @@
   .answer-drawer-title {
     display: flex;
     flex: 1;
-    align-items: baseline;
-    gap: 10px;
+    align-items: center;
+    gap: 9px;
   }
 
   .answer-drawer-title small {
-    padding: 4px 6px;
+    padding: 3px 5px;
     background: var(--red);
     color: white;
     font-family: Georgia, serif;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 900;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.14em;
   }
 
   .answer-drawer-title strong {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 900;
     letter-spacing: 0.02em;
   }
 
   .answer-drawer-state {
-    margin-right: 8px;
+    margin-right: 7px;
     color: var(--ink);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 900;
   }
 
   .answer-drawer-chevron {
     display: inline-block;
     color: var(--red-dark);
-    font-size: 23px;
+    font-size: 21px;
     font-weight: 900;
     line-height: 1;
     transition: transform var(--dur-fast) var(--ease-out);
@@ -128,8 +128,8 @@
   }
 
   .answer-panel #answer-area {
-    max-height: calc(min(72svh, 640px) - 68px);
-    padding: 20px 18px calc(22px + env(safe-area-inset-bottom));
+    max-height: calc(min(22svh, 180px) - 58px);
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom));
     overflow-y: auto;
     overscroll-behavior: contain;
     opacity: 1;
@@ -149,15 +149,84 @@
   }
 
   .answer-panel .answer-kicker {
-    margin-bottom: 14px;
-    font-size: 21px;
+    display: none;
+  }
+
+  .answer-panel #answer-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .answer-panel .answer-input-wrap input {
+    min-height: 40px;
+    height: 40px;
+    padding-inline: 10px;
+    font-size: 14px;
+  }
+
+  .answer-panel form .button {
+    width: auto;
+    min-height: 40px;
+    margin-top: 0;
+    padding-inline: 14px;
+    font-size: 13px;
+    white-space: nowrap;
   }
 
   .answer-panel .hint-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 7px;
   }
 
   .answer-panel .hint-button {
-    min-height: 48px;
+    min-height: 34px;
+    padding: 4px 7px;
+  }
+
+  .answer-panel .hint-button strong {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .answer-panel .hint-button small {
+    margin-top: 1px;
+    font-size: 8px;
+    line-height: 1.2;
+    opacity: 0.72;
+  }
+
+  .answer-panel .hint-status {
+    margin-top: 6px;
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+
+  .answer-panel .choice-confirm > div {
+    margin-top: 6px;
+    padding-top: 6px;
+  }
+
+  .answer-panel .choice-confirm p {
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .answer-panel .choice-confirm .button {
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .answer-panel .choice-list {
+    gap: 5px;
+  }
+
+  .answer-panel .choice-button {
+    min-height: 36px;
+    padding: 5px 8px;
+    font-size: 11px;
   }
 }
