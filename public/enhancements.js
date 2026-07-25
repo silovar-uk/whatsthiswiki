@@ -4,6 +4,7 @@ const mobileAnswerQuery = window.matchMedia('(max-width: 800px)');
 let enhanceQueued = false;
 let pendingTopScroll = false;
 let previousQuestionLabel = '';
+let lastRenderedQuestionLabel = '';
 
 function escapeText(value) {
   return String(value)
@@ -18,6 +19,28 @@ function scrollPageTop() {
   window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
+}
+
+function resetPageTopAfterRender() {
+  requestAnimationFrame(() => {
+    scrollPageTop();
+    requestAnimationFrame(scrollPageTop);
+  });
+  setTimeout(scrollPageTop, 80);
+  setTimeout(scrollPageTop, 220);
+}
+
+function ensureQuestionStartsAtTop() {
+  const currentQuestionLabel = app.querySelector('.progress-label')?.textContent || '';
+
+  if (!currentQuestionLabel) {
+    lastRenderedQuestionLabel = '';
+    return;
+  }
+  if (currentQuestionLabel === lastRenderedQuestionLabel) return;
+
+  lastRenderedQuestionLabel = currentQuestionLabel;
+  resetPageTopAfterRender();
 }
 
 function scheduleEnhance() {
@@ -204,11 +227,7 @@ function handlePendingTopScroll() {
   if (!movedToResults && !movedToNextQuestion) return;
 
   pendingTopScroll = false;
-  requestAnimationFrame(() => {
-    scrollPageTop();
-    requestAnimationFrame(scrollPageTop);
-  });
-  setTimeout(scrollPageTop, 180);
+  resetPageTopAfterRender();
 }
 
 function enhanceApp() {
@@ -219,6 +238,7 @@ function enhanceApp() {
   updateHintLabels();
   updateNextButtonLabel();
   setupCustomUrlHelper();
+  ensureQuestionStartsAtTop();
   handlePendingTopScroll();
 }
 
