@@ -32,6 +32,8 @@ function scheduleEnhance() {
 function setAnswerDrawerExpanded(panel, expanded, { focus = false } = {}) {
   const toggle = panel.querySelector('[data-answer-drawer-toggle]');
   const stateLabel = panel.querySelector('[data-answer-drawer-state]');
+  const answerInput = panel.querySelector('#answer-input');
+  answerInput?.removeAttribute('autofocus');
 
   if (!mobileAnswerQuery.matches) {
     panel.classList.remove('is-collapsed');
@@ -45,6 +47,11 @@ function setAnswerDrawerExpanded(panel, expanded, { focus = false } = {}) {
   panel.classList.toggle('is-collapsed', !expanded);
   toggle?.setAttribute('aria-expanded', String(expanded));
   if (stateLabel) stateLabel.textContent = expanded ? '閉じる' : '開く';
+
+  if (!expanded && document.activeElement === answerInput) {
+    answerInput.blur();
+    toggle?.focus({ preventScroll: true });
+  }
 
   if (expanded && focus) {
     setTimeout(() => {
@@ -222,6 +229,15 @@ document.addEventListener('click', (event) => {
   previousQuestionLabel = app.querySelector('.progress-label')?.textContent || '';
   pendingTopScroll = true;
   setTimeout(handlePendingTopScroll, 250);
+}, true);
+
+document.addEventListener('focusin', (event) => {
+  if (!mobileAnswerQuery.matches || event.target.id !== 'answer-input') return;
+  const panel = event.target.closest('.answer-panel');
+  if (!panel?.classList.contains('is-collapsed')) return;
+
+  event.target.blur();
+  panel.querySelector('[data-answer-drawer-toggle]')?.focus({ preventScroll: true });
 }, true);
 
 mobileAnswerQuery.addEventListener?.('change', () => {
