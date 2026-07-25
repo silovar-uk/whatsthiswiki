@@ -120,9 +120,6 @@ legend, .field > span { margin-bottom: 12px; font-size: 12px; font-weight: 800; 
 .answer-input-wrap input { width: 100%; min-height: 58px; padding: 0 14px; border: 0; background: white; color: var(--ink); font-size: 16px; }
 .answer-panel form .button { width: 100%; margin-top: 12px; }
 .answer-panel .button-text { width: 100%; margin-top: 14px; color: #ff9d91; }
-.give-up-confirm { margin-top: 20px; padding-top: 18px; border-top: 1px solid #595955; }
-.give-up-confirm p { margin: 0 0 14px; color: #d7d5cf; font-size: 12px; line-height: 1.65; }
-.give-up-confirm > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .choice-list { display: grid; gap: 9px; }
 .choice-button { min-height: 52px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; border: 1px solid #63635f; background: #2c2c29; color: white; text-align: left; font-weight: 750; }
 .choice-button:hover { border-color: var(--yellow); background: #3b3b36; }

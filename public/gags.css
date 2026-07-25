@@ -65,19 +65,6 @@ body {
   letter-spacing: -0.02em;
 }
 
-.header-excuse {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  transform: translateX(-50%) rotate(-2deg);
-  padding: 5px 9px;
-  color: white;
-  background: var(--gag-black);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .05em;
-}
-
 .panel {
   border: 3px solid var(--gag-black);
   box-shadow: 8px 8px 0 var(--gag-black);
@@ -105,21 +92,6 @@ body {
   50% { transform: rotate(9deg) translateY(-10px); }
 }
 
-.hero::after,
-[data-gag]::after {
-  content: attr(data-gag);
-  display: inline-block;
-  margin-top: 18px;
-  padding: 8px 12px;
-  color: white;
-  background: var(--gag-black);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.45;
-  transform: rotate(-1.5deg);
-  box-shadow: 4px 4px 0 var(--gag-yellow);
-}
-
 .hero h1 {
   text-shadow: 3px 3px 0 white, 6px 6px 0 var(--gag-cyan);
 }
@@ -140,18 +112,6 @@ body {
   background:
     linear-gradient(white, white) padding-box,
     repeating-linear-gradient(45deg, var(--gag-yellow) 0 10px, var(--gag-black) 10px 13px) border-box;
-}
-
-.setup-panel::before {
-  content: 'さあ、どの記事を探す？';
-  position: absolute;
-  left: 22px;
-  top: -22px;
-  padding: 8px 14px;
-  color: white;
-  background: var(--gag-black);
-  font-weight: 900;
-  transform: rotate(-1deg);
 }
 
 .segmented input:checked + span {
@@ -192,34 +152,6 @@ body {
 .how-to article:nth-child(odd) { transform: rotate(-.4deg); }
 .how-to article:nth-child(even) { transform: rotate(.4deg); }
 .how-to::after { position: absolute; right: 10px; bottom: -42px; }
-
-.gag-sticker {
-  position: absolute;
-  z-index: 8;
-  display: grid;
-  place-items: center;
-  min-width: 88px;
-  min-height: 70px;
-  padding: 10px;
-  white-space: pre-line;
-  text-align: center;
-  color: var(--gag-black);
-  background: var(--gag-yellow);
-  border: 3px solid var(--gag-black);
-  font-size: 12px;
-  font-weight: 1000;
-  line-height: 1.25;
-  transform: rotate(7deg);
-  box-shadow: 4px 4px 0 var(--gag-black);
-  clip-path: polygon(50% 0%, 62% 15%, 80% 6%, 86% 25%, 100% 32%, 88% 50%, 100% 68%, 83% 75%, 78% 96%, 59% 86%, 47% 100%, 35% 84%, 15% 94%, 13% 73%, 0 62%, 12% 47%, 1% 28%, 21% 23%, 28% 4%);
-}
-
-.gag-sticker--hero { right: 5%; bottom: 26px; background: var(--gag-yellow); }
-.gag-sticker--setup { right: -18px; top: -28px; background: var(--gag-cyan); transform: rotate(9deg); }
-.gag-sticker--toc { right: -28px; top: 62px; background: var(--gag-pink); color: white; }
-.gag-sticker--answer { right: -18px; top: -30px; background: var(--gag-yellow); color: var(--gag-black); }
-.gag-sticker--result { right: 8%; top: 16%; background: var(--gag-cyan); }
-.gag-sticker--invite { right: -20px; top: 30px; background: var(--gag-pink); color: white; }
 
 .game-topbar {
   padding: 8px 12px;
@@ -347,69 +279,10 @@ body {
   color: var(--gag-black);
 }
 
-.wiki-mascot {
-  position: fixed;
-  z-index: 50;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  cursor: pointer;
-  filter: drop-shadow(4px 5px 0 rgba(0,0,0,.25));
-}
-
-.wiki-mascot img {
-  width: 74px;
-  height: 74px;
-  transform: rotate(5deg);
-  transition: transform .18s ease;
-}
-
-.wiki-mascot:hover img { transform: rotate(-4deg) scale(1.06); }
-
-.wiki-mascot__bubble {
-  max-width: 130px;
-  margin-bottom: 30px;
-  padding: 8px 10px;
-  color: var(--gag-black);
-  background: white;
-  border: 3px solid var(--gag-black);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1.35;
-  transform: rotate(-3deg);
-  clip-path: polygon(0 0, 100% 0, 100% 78%, 77% 78%, 88% 100%, 61% 79%, 0 79%);
-}
-
-.wiki-mascot.is-bouncing img { animation: mascot-bounce .35s ease; }
-.wiki-mascot.is-playing .wiki-mascot__bubble { background: var(--gag-yellow); }
-
-@keyframes mascot-bounce {
-  0%, 100% { transform: rotate(5deg) translateY(0); }
-  45% { transform: rotate(-6deg) translateY(-18px); }
-}
-
-@media (max-width: 900px) {
-  .header-excuse { display: none; }
-  .gag-sticker--toc { right: -6px; top: -32px; }
-  .gag-sticker--setup { right: -5px; }
-}
-
 @media (max-width: 600px) {
   .brand strong { font-size: 14px; }
   .hero::before { right: -2%; top: 14%; opacity: .45; }
-  .gag-sticker { min-width: 72px; min-height: 58px; font-size: 10px; }
-  .gag-sticker--hero { right: 0; bottom: 12px; }
-  .gag-sticker--setup { top: -17px; }
-  .gag-sticker--result { right: 0; top: 0; }
-  .wiki-mascot img { width: 54px; height: 54px; }
-  .wiki-mascot__bubble { display: none; }
   .site-footer { padding-right: 70px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wiki-mascot.is-bouncing img { animation: none; }
 }
 
 /* --- 結果演出 --- */

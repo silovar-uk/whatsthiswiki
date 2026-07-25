@@ -1,13 +1,3 @@
-/* Visual playfulness remains, while all copy stays functional and neutral. */
-.header-excuse,
-.gag-sticker,
-.wiki-mascot,
-.hero::after,
-[data-gag]::after,
-.setup-panel::before {
-  display: none !important;
-}
-
 .segmented {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
