@@ -12,12 +12,46 @@ import {
   isCorrectAnswer,
   saveBestScore,
   scoreAnswer,
-  shuffle
+  shuffle,
+  trailingCorrectCount
 } from './utils.js';
 
 const app = document.querySelector('#app');
 const headerShareButton = document.querySelector('#share-header');
 const loadingTemplate = document.querySelector('#loading-template');
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+
+function burstConfetti(host) {
+  if (REDUCED_MOTION.matches) return;
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 24; i += 1) {
+    const piece = document.createElement('i');
+    piece.style.setProperty('--x', `${Math.random() * 100}%`);
+    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * 140}px`);
+    piece.style.setProperty('--spin', `${360 + Math.random() * 540}deg`);
+    piece.style.setProperty('--delay', `${Math.random() * 0.28}s`);
+    layer.append(piece);
+  }
+  host.append(layer);
+  setTimeout(() => layer.remove(), 2400);
+}
+
+function countUp(el, from, to, ms = 620) {
+  if (REDUCED_MOTION.matches || from === to) {
+    el.textContent = to.toLocaleString();
+    return;
+  }
+  const started = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / ms);
+    const eased = 1 - (1 - t) ** 3;
+    el.textContent = Math.round(from + (to - from) * eased).toLocaleString();
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
 
 const LABELS = {
   categories: {
@@ -332,9 +366,9 @@ function renderQuestion() {
     <section class="game-topbar">
       <div>
         <span class="progress-label">QUESTION ${state.index + 1} / ${state.challenge.questions.length}</span>
-        <div class="progress-track"><span style="width:${((state.index + 1) / state.challenge.questions.length) * 100}%"></span></div>
+        <div class="progress-track"><span style="width:${(state.index / state.challenge.questions.length) * 100}%"></span></div>
       </div>
-      <strong>${state.answers.reduce((sum, answer) => sum + answer.score, 0).toLocaleString()} pt</strong>
+      <strong><span id="score-total">${state.answers.reduce((sum, answer) => sum + answer.score, 0).toLocaleString()}</span> pt</strong>
     </section>
 
     <section class="question-layout">
@@ -379,6 +413,10 @@ function renderQuestion() {
       </aside>
     </section>
   `;
+
+  const total = state.challenge.questions.length;
+  const bar = document.querySelector('.progress-track span');
+  requestAnimationFrame(() => { bar.style.width = `${((state.index + 1) / total) * 100}%`; });
 
   const input = document.querySelector('#answer-input');
   setTimeout(() => input?.focus(), 50);
@@ -446,6 +484,7 @@ function resolveAnswer({ mode, submitted }) {
   const elapsedMs = performance.now() - state.questionStartedAt;
   const correct = isCorrectAnswer(submitted, question);
   const score = scoreAnswer({ correct, mode, elapsedMs });
+  const previousTotal = state.answers.reduce((sum, answer) => sum + answer.score, 0);
   state.resolved = true;
   state.answers.push({
     questionId: question.id,
@@ -457,11 +496,15 @@ function resolveAnswer({ mode, submitted }) {
     elapsedMs
   });
 
+  const combo = trailingCorrectCount(state.answers);
+  const comboMarkup = correct && combo >= 2 ? `<p class="combo-badge">${combo} 問連続正解</p>` : '';
+
   document.querySelector('#answer-area').innerHTML = `
     <div class="answer-result ${correct ? 'is-correct' : 'is-wrong'}">
       <span class="result-mark">${correct ? '○' : '×'}</span>
       <p>${correct ? '正解' : '不正解'}</p>
       <h2>${escapeHtml(question.title)}</h2>
+      ${comboMarkup}
       <div class="result-points">+${score.toLocaleString()} pt</div>
       ${mode !== 'choice' && !correct ? `<small>あなたの回答：${escapeHtml(submitted)}</small>` : ''}
       <small>回答方法：${modeLabel(mode)}</small>
@@ -471,7 +514,16 @@ function resolveAnswer({ mode, submitted }) {
       </button>
     </div>
   `;
-  document.querySelector('#next-question').addEventListener('click', () => {
+
+  const resultBox = document.querySelector('.answer-result');
+  if (correct) burstConfetti(resultBox);
+
+  const scoreEl = document.querySelector('#score-total');
+  if (scoreEl) countUp(scoreEl, previousTotal, previousTotal + score);
+
+  const nextButton = document.querySelector('#next-question');
+  nextButton.focus({ preventScroll: true });
+  nextButton.addEventListener('click', () => {
     state.index += 1;
     if (state.index >= state.challenge.questions.length) renderResults();
     else renderQuestion();

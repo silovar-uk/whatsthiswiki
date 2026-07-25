@@ -8,7 +8,8 @@ import {
   getInitialCharacter,
   isCorrectAnswer,
   normalizeAnswer,
-  scoreAnswer
+  scoreAnswer,
+  trailingCorrectCount
 } from '../public/utils.js';
 import { extractWikipediaTitle } from '../public/wiki.js';
 
@@ -33,6 +34,13 @@ test('ヒント段階ごとに点数を分ける', () => {
 test('先頭の書記素を取得する', () => {
   assert.equal(getInitialCharacter('富士山'), '富');
   assert.equal(getInitialCharacter('🍙おにぎり'), '🍙');
+});
+
+test('末尾からの連続正解数を数える', () => {
+  assert.equal(trailingCorrectCount([]), 0);
+  assert.equal(trailingCorrectCount([{ correct: true }, { correct: true }]), 2);
+  assert.equal(trailingCorrectCount([{ correct: true }, { correct: false }]), 0);
+  assert.equal(trailingCorrectCount([{ correct: false }, { correct: true }]), 1);
 });
 
 test('日本語版WikipediaのURLから記事名を取得する', () => {

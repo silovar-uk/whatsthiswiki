@@ -197,6 +197,15 @@ export function saveBestScore(key, result) {
   }
 }
 
+export function trailingCorrectCount(answers) {
+  let count = 0;
+  for (let i = answers.length - 1; i >= 0; i -= 1) {
+    if (!answers[i].correct) break;
+    count += 1;
+  }
+  return count;
+}
+
 export function hashString(value) {
   let hash = 2166136261;
   for (const char of String(value)) {
