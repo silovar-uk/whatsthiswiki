@@ -12,12 +12,51 @@ import {
   isCorrectAnswer,
   saveBestScore,
   scoreAnswer,
-  shuffle
+  shuffle,
+  trailingCorrectCount
 } from './utils.js';
 
 const app = document.querySelector('#app');
 const headerShareButton = document.querySelector('#share-header');
 const loadingTemplate = document.querySelector('#loading-template');
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+
+function burstConfetti(host) {
+  if (REDUCED_MOTION.matches) return;
+  const layer = document.createElement('div');
+  layer.className = 'confetti-layer';
+  layer.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 24; i += 1) {
+    const piece = document.createElement('i');
+    piece.style.setProperty('--x', `${Math.random() * 100}%`);
+    piece.style.setProperty('--drift', `${(Math.random() - 0.5) * 140}px`);
+    piece.style.setProperty('--spin', `${360 + Math.random() * 540}deg`);
+    piece.style.setProperty('--delay', `${Math.random() * 0.28}s`);
+    layer.append(piece);
+  }
+  host.append(layer);
+  setTimeout(() => layer.remove(), 2400);
+}
+
+function countUp(el, from, to, ms = 620) {
+  if (REDUCED_MOTION.matches || from === to) {
+    el.textContent = to.toLocaleString();
+    return;
+  }
+  const started = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / ms);
+    const eased = 1 - (1 - t) ** 3;
+    el.textContent = Math.round(from + (to - from) * eased).toLocaleString();
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function withTransition(fn) {
+  if (!document.startViewTransition || REDUCED_MOTION.matches) return fn();
+  return document.startViewTransition(fn);
+}
 
 const LABELS = {
   categories: {
@@ -301,7 +340,7 @@ function renderSharedIntro(challenge, encoded) {
   document.querySelector('#start-shared').addEventListener('click', startGame);
   document.querySelector('#back-home').addEventListener('click', () => {
     history.replaceState(null, '', location.pathname);
-    renderHome();
+    withTransition(() => renderHome());
   });
 }
 
@@ -309,12 +348,12 @@ function startGame() {
   state.index = 0;
   state.answers = [];
   state.startedAt = performance.now();
-  renderQuestion();
+  withTransition(() => renderQuestion());
 }
 
 function tocMarkup(sections) {
   return sections.map((section, index) => `
-    <li style="--depth:${Math.max(0, Number(section.level || 1) - 1)}">
+    <li style="--depth:${Math.max(0, Number(section.level || 1) - 1)}; --i:${index}">
       <span class="toc-number">${index + 1}</span>
       <span>${escapeHtml(section.text)}</span>
     </li>
@@ -332,9 +371,9 @@ function renderQuestion() {
     <section class="game-topbar">
       <div>
         <span class="progress-label">QUESTION ${state.index + 1} / ${state.challenge.questions.length}</span>
-        <div class="progress-track"><span style="width:${((state.index + 1) / state.challenge.questions.length) * 100}%"></span></div>
+        <div class="progress-track"><span style="width:${(state.index / state.challenge.questions.length) * 100}%"></span></div>
       </div>
-      <strong>${state.answers.reduce((sum, answer) => sum + answer.score, 0).toLocaleString()} pt</strong>
+      <strong><span id="score-total">${state.answers.reduce((sum, answer) => sum + answer.score, 0).toLocaleString()}</span> pt</strong>
     </section>
 
     <section class="question-layout">
@@ -368,17 +407,23 @@ function renderQuestion() {
             </button>
           </div>
           <p id="hint-status" class="hint-status is-hidden"></p>
-          <div id="choice-confirm" class="choice-confirm is-hidden">
-            <p>4択を表示すると、自由入力には戻れません。</p>
+          <div id="choice-confirm" class="choice-confirm" inert>
             <div>
-              <button id="cancel-choices" class="button button-quiet" type="button">戻る</button>
-              <button id="confirm-choices" class="button button-danger" type="button">4択を表示</button>
+              <p>4択を表示すると、自由入力には戻れません。</p>
+              <div>
+                <button id="cancel-choices" class="button button-quiet" type="button">戻る</button>
+                <button id="confirm-choices" class="button button-danger" type="button">4択を表示</button>
+              </div>
             </div>
           </div>
         </div>
       </aside>
     </section>
   `;
+
+  const total = state.challenge.questions.length;
+  const bar = document.querySelector('.progress-track span');
+  requestAnimationFrame(() => { bar.style.width = `${((state.index + 1) / total) * 100}%`; });
 
   const input = document.querySelector('#answer-input');
   setTimeout(() => input?.focus(), 50);
@@ -389,11 +434,15 @@ function renderQuestion() {
   });
   document.querySelector('#show-initial').addEventListener('click', showInitialHint);
   document.querySelector('#request-choices').addEventListener('click', () => {
-    document.querySelector('#choice-confirm').classList.remove('is-hidden');
+    const confirmPanel = document.querySelector('#choice-confirm');
+    confirmPanel.classList.add('is-open');
+    confirmPanel.removeAttribute('inert');
     document.querySelector('#request-choices').disabled = true;
   });
   document.querySelector('#cancel-choices').addEventListener('click', () => {
-    document.querySelector('#choice-confirm').classList.add('is-hidden');
+    const confirmPanel = document.querySelector('#choice-confirm');
+    confirmPanel.classList.remove('is-open');
+    confirmPanel.setAttribute('inert', '');
     document.querySelector('#request-choices').disabled = false;
     input.focus();
   });
@@ -446,6 +495,7 @@ function resolveAnswer({ mode, submitted }) {
   const elapsedMs = performance.now() - state.questionStartedAt;
   const correct = isCorrectAnswer(submitted, question);
   const score = scoreAnswer({ correct, mode, elapsedMs });
+  const previousTotal = state.answers.reduce((sum, answer) => sum + answer.score, 0);
   state.resolved = true;
   state.answers.push({
     questionId: question.id,
@@ -457,11 +507,15 @@ function resolveAnswer({ mode, submitted }) {
     elapsedMs
   });
 
+  const combo = trailingCorrectCount(state.answers);
+  const comboMarkup = correct && combo >= 2 ? `<p class="combo-badge">${combo} 問連続正解</p>` : '';
+
   document.querySelector('#answer-area').innerHTML = `
     <div class="answer-result ${correct ? 'is-correct' : 'is-wrong'}">
       <span class="result-mark">${correct ? '○' : '×'}</span>
       <p>${correct ? '正解' : '不正解'}</p>
       <h2>${escapeHtml(question.title)}</h2>
+      ${comboMarkup}
       <div class="result-points">+${score.toLocaleString()} pt</div>
       ${mode !== 'choice' && !correct ? `<small>あなたの回答：${escapeHtml(submitted)}</small>` : ''}
       <small>回答方法：${modeLabel(mode)}</small>
@@ -471,10 +525,21 @@ function resolveAnswer({ mode, submitted }) {
       </button>
     </div>
   `;
-  document.querySelector('#next-question').addEventListener('click', () => {
+
+  const resultBox = document.querySelector('.answer-result');
+  if (correct) burstConfetti(resultBox);
+
+  const scoreEl = document.querySelector('#score-total');
+  if (scoreEl) countUp(scoreEl, previousTotal, previousTotal + score);
+
+  const nextButton = document.querySelector('#next-question');
+  nextButton.focus({ preventScroll: true });
+  nextButton.addEventListener('click', () => {
     state.index += 1;
-    if (state.index >= state.challenge.questions.length) renderResults();
-    else renderQuestion();
+    withTransition(() => {
+      if (state.index >= state.challenge.questions.length) renderResults();
+      else renderQuestion();
+    });
   });
 }
 
@@ -512,7 +577,7 @@ function renderResults() {
     <section class="answer-review">
       <h2>答え合わせ</h2>
       ${state.answers.map((answer, index) => `
-        <article>
+        <article style="--i:${index}">
           <span class="review-number">${index + 1}</span>
           <div><strong>${escapeHtml(answer.title)}</strong><small>${answer.correct ? '正解' : '不正解'}・${modeLabel(answer.mode)}・${answer.score}pt</small></div>
           <span class="review-mark ${answer.correct ? 'correct' : 'wrong'}">${answer.correct ? '○' : '×'}</span>
@@ -525,7 +590,7 @@ function renderResults() {
   document.querySelector('#retry').addEventListener('click', startGame);
   document.querySelector('#new-game').addEventListener('click', () => {
     history.replaceState(null, '', location.pathname);
-    renderHome();
+    withTransition(() => renderHome());
   });
 }
 
@@ -563,20 +628,20 @@ function renderError(message, retry) {
       <button id="retry-action" class="button button-primary">入力画面に戻る</button>
     </section>
   `;
-  document.querySelector('#retry-action').addEventListener('click', retry);
+  document.querySelector('#retry-action').addEventListener('click', () => withTransition(retry));
 }
 
 async function boot() {
   headerShareButton.addEventListener('click', () => shareChallenge());
   const encoded = getChallengeFromHash();
   if (!encoded) {
-    renderHome();
+    withTransition(() => renderHome());
     return;
   }
   setLoading('共有クイズを開いています…');
   try {
     const challenge = await decodeChallenge(encoded);
-    renderSharedIntro(challenge, encoded);
+    withTransition(() => renderSharedIntro(challenge, encoded));
   } catch (error) {
     renderError(error.message, renderHome);
   }

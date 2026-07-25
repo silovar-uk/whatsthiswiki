@@ -91,10 +91,8 @@ public/
   questions.js
   wiki.js
   utils.js
-  styles.css
-  gags.css          視覚表現のみ
-  balance.css
-  interaction.css   ヒント・URL入力・文言調整
+  styles.css        基礎レイアウト
+  gags.css          視覚表現・モーション
   assets/
 
 test/

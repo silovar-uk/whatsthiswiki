@@ -25,7 +25,9 @@ body {
     repeating-linear-gradient(3deg, transparent 0 7px, rgba(0,0,0,.08) 8px 9px),
     repeating-linear-gradient(93deg, transparent 0 13px, rgba(0,0,0,.04) 14px 15px);
   mix-blend-mode: multiply;
+  animation: paper-breathe 14s ease-in-out infinite;
 }
+@keyframes paper-breathe { 50% { opacity: .16; } }
 
 .site-header {
   position: relative;
@@ -63,19 +65,6 @@ body {
   letter-spacing: -0.02em;
 }
 
-.header-excuse {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  transform: translateX(-50%) rotate(-2deg);
-  padding: 5px 9px;
-  color: white;
-  background: var(--gag-black);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .05em;
-}
-
 .panel {
   border: 3px solid var(--gag-black);
   box-shadow: 8px 8px 0 var(--gag-black);
@@ -96,21 +85,11 @@ body {
   font: 900 clamp(78px, 15vw, 160px)/1 Georgia, serif;
   transform: rotate(12deg);
   opacity: .92;
+  animation: hero-float 6s ease-in-out infinite;
 }
-
-.hero::after,
-[data-gag]::after {
-  content: attr(data-gag);
-  display: inline-block;
-  margin-top: 18px;
-  padding: 8px 12px;
-  color: white;
-  background: var(--gag-black);
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1.45;
-  transform: rotate(-1.5deg);
-  box-shadow: 4px 4px 0 var(--gag-yellow);
+@keyframes hero-float {
+  0%, 100% { transform: rotate(12deg); }
+  50% { transform: rotate(9deg) translateY(-10px); }
 }
 
 .hero h1 {
@@ -133,18 +112,6 @@ body {
   background:
     linear-gradient(white, white) padding-box,
     repeating-linear-gradient(45deg, var(--gag-yellow) 0 10px, var(--gag-black) 10px 13px) border-box;
-}
-
-.setup-panel::before {
-  content: 'さあ、どの記事を探す？';
-  position: absolute;
-  left: 22px;
-  top: -22px;
-  padding: 8px 14px;
-  color: white;
-  background: var(--gag-black);
-  font-weight: 900;
-  transform: rotate(-1deg);
 }
 
 .segmented input:checked + span {
@@ -185,34 +152,6 @@ body {
 .how-to article:nth-child(odd) { transform: rotate(-.4deg); }
 .how-to article:nth-child(even) { transform: rotate(.4deg); }
 .how-to::after { position: absolute; right: 10px; bottom: -42px; }
-
-.gag-sticker {
-  position: absolute;
-  z-index: 8;
-  display: grid;
-  place-items: center;
-  min-width: 88px;
-  min-height: 70px;
-  padding: 10px;
-  white-space: pre-line;
-  text-align: center;
-  color: var(--gag-black);
-  background: var(--gag-yellow);
-  border: 3px solid var(--gag-black);
-  font-size: 12px;
-  font-weight: 1000;
-  line-height: 1.25;
-  transform: rotate(7deg);
-  box-shadow: 4px 4px 0 var(--gag-black);
-  clip-path: polygon(50% 0%, 62% 15%, 80% 6%, 86% 25%, 100% 32%, 88% 50%, 100% 68%, 83% 75%, 78% 96%, 59% 86%, 47% 100%, 35% 84%, 15% 94%, 13% 73%, 0 62%, 12% 47%, 1% 28%, 21% 23%, 28% 4%);
-}
-
-.gag-sticker--hero { right: 5%; bottom: 26px; background: var(--gag-yellow); }
-.gag-sticker--setup { right: -18px; top: -28px; background: var(--gag-cyan); transform: rotate(9deg); }
-.gag-sticker--toc { right: -28px; top: 62px; background: var(--gag-pink); color: white; }
-.gag-sticker--answer { right: -18px; top: -30px; background: var(--gag-yellow); color: var(--gag-black); }
-.gag-sticker--result { right: 8%; top: 16%; background: var(--gag-cyan); }
-.gag-sticker--invite { right: -20px; top: 30px; background: var(--gag-pink); color: white; }
 
 .game-topbar {
   padding: 8px 12px;
@@ -340,67 +279,82 @@ body {
   color: var(--gag-black);
 }
 
-.wiki-mascot {
-  position: fixed;
-  z-index: 50;
-  right: max(14px, env(safe-area-inset-right));
-  bottom: max(14px, env(safe-area-inset-bottom));
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  cursor: pointer;
-  filter: drop-shadow(4px 5px 0 rgba(0,0,0,.25));
-}
-
-.wiki-mascot img {
-  width: 74px;
-  height: 74px;
-  transform: rotate(5deg);
-  transition: transform .18s ease;
-}
-
-.wiki-mascot:hover img { transform: rotate(-4deg) scale(1.06); }
-
-.wiki-mascot__bubble {
-  max-width: 130px;
-  margin-bottom: 30px;
-  padding: 8px 10px;
-  color: var(--gag-black);
-  background: white;
-  border: 3px solid var(--gag-black);
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1.35;
-  transform: rotate(-3deg);
-  clip-path: polygon(0 0, 100% 0, 100% 78%, 77% 78%, 88% 100%, 61% 79%, 0 79%);
-}
-
-.wiki-mascot.is-bouncing img { animation: mascot-bounce .35s ease; }
-.wiki-mascot.is-playing .wiki-mascot__bubble { background: var(--gag-yellow); }
-
-@keyframes mascot-bounce {
-  0%, 100% { transform: rotate(5deg) translateY(0); }
-  45% { transform: rotate(-6deg) translateY(-18px); }
-}
-
-@media (max-width: 900px) {
-  .header-excuse { display: none; }
-  .gag-sticker--toc { right: -6px; top: -32px; }
-  .gag-sticker--setup { right: -5px; }
-}
-
 @media (max-width: 600px) {
   .brand strong { font-size: 14px; }
   .hero::before { right: -2%; top: 14%; opacity: .45; }
-  .gag-sticker { min-width: 72px; min-height: 58px; font-size: 10px; }
-  .gag-sticker--hero { right: 0; bottom: 12px; }
-  .gag-sticker--setup { top: -17px; }
-  .gag-sticker--result { right: 0; top: 0; }
-  .wiki-mascot img { width: 54px; height: 54px; }
-  .wiki-mascot__bubble { display: none; }
   .site-footer { padding-right: 70px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .wiki-mascot.is-bouncing img { animation: none; }
+/* --- 結果演出 --- */
+.confetti-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.confetti-layer i {
+  position: absolute; top: -18px; left: var(--x);
+  width: 8px; height: 14px; background: var(--gag-pink);
+  animation: confetti-fall 1.8s var(--delay) cubic-bezier(.3,.6,.4,1) forwards;
 }
+.confetti-layer i:nth-child(3n)   { background: var(--gag-cyan); }
+.confetti-layer i:nth-child(3n+1) { background: var(--gag-yellow); }
+@keyframes confetti-fall {
+  to { transform: translate(var(--drift), 360px) rotate(var(--spin)); opacity: 0; }
+}
+
+.answer-result .result-mark { display: inline-block; animation: stamp-in .42s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes stamp-in {
+  0%   { transform: scale(2.4) rotate(-14deg); opacity: 0; }
+  60%  { transform: scale(.92) rotate(2deg);   opacity: 1; }
+  100% { transform: scale(1) rotate(0);        opacity: 1; }
+}
+
+.combo-badge {
+  display: inline-block; margin: 0 0 6px; padding: 4px 10px;
+  color: var(--gag-black); background: var(--gag-yellow);
+  border: 2px solid var(--gag-black); font-size: 11px; font-weight: 900;
+  transform: rotate(-2deg); box-shadow: 3px 3px 0 var(--gag-black);
+  animation: combo-pop var(--dur-slow) var(--ease-pop) both;
+}
+@keyframes combo-pop {
+  0%   { transform: rotate(-2deg) scale(0); }
+  70%  { transform: rotate(-2deg) scale(1.14); }
+  100% { transform: rotate(-2deg) scale(1); }
+}
+
+.answer-result.is-wrong { animation: shake-x .38s ease-in-out both; }
+@keyframes shake-x {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(2px); }
+}
+
+/* --- 目次の流し込み --- */
+.toc-list li {
+  animation: toc-in var(--dur-base) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 18) * 34ms);
+}
+@keyframes toc-in { from { opacity: 0; transform: translateX(-10px); } }
+
+/* --- カード類のずらし出現 --- */
+.how-to article, .choice-button, .result-stats div {
+  animation: rise-in var(--dur-base) var(--ease-out) both;
+}
+.how-to article:nth-child(2), .choice-button:nth-child(2), .result-stats div:nth-child(2) { animation-delay: 60ms; }
+.how-to article:nth-child(3), .choice-button:nth-child(3), .result-stats div:nth-child(3) { animation-delay: 120ms; }
+.how-to article:nth-child(4), .choice-button:nth-child(4) { animation-delay: 180ms; }
+
+.answer-review article {
+  animation: rise-in var(--dur-base) var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 10) * 45ms);
+}
+@keyframes rise-in { from { opacity: 0; transform: translateY(14px); } }
+
+/* --- 画面遷移 --- */
+::view-transition-old(root) { animation: vt-out var(--dur-fast) ease both; }
+::view-transition-new(root) { animation: vt-in .28s ease both; }
+@keyframes vt-out { to { opacity: 0; transform: translateX(-16px); } }
+@keyframes vt-in  { from { opacity: 0; transform: translateX(20px); } }
+
+/* --- ボタンの押し込み --- */
+.button-primary:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--gag-black); }
+
+/* --- 読み込み中の脈動 --- */
+[data-loading-message] { animation: loading-pulse 1.6s ease-in-out infinite; }
+@keyframes loading-pulse { 50% { opacity: .45; } }
