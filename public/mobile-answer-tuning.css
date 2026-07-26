@@ -1,0 +1,110 @@
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (max-width: 820px) {
+  #answer-input {
+    font-size: 17px;
+    line-height: 1.35;
+  }
+
+  .answer-panel,
+  .answer-result {
+    scroll-margin-top: 12px;
+  }
+
+  .hint-actions {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin-top: 14px;
+  }
+
+  .hint-button {
+    position: relative;
+    width: 100%;
+    border-radius: 0;
+    text-align: left;
+    transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .hint-button::before {
+    display: inline-block;
+    margin-bottom: 5px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .16em;
+  }
+
+  .hint-button strong {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .hint-button small {
+    margin-top: 5px;
+    font-size: 10px;
+  }
+
+  .hint-button--primary {
+    min-height: 64px;
+    padding: 10px 13px;
+    border: 2px solid #1d1d1b;
+    background: #9f4a46;
+    color: #fff;
+    box-shadow: 0 4px 0 #1d1d1b;
+  }
+
+  .hint-button--primary::before {
+    content: 'HINT 01・おすすめ';
+    color: #ffe0dc;
+  }
+
+  .hint-button--primary small {
+    color: #ffe9e6;
+  }
+
+  .hint-button--primary:hover,
+  .hint-button--primary:focus-visible {
+    border-color: #1d1d1b;
+    background: #8c3e3a;
+  }
+
+  .hint-button--secondary {
+    min-height: 50px;
+    padding: 8px 12px;
+    border: 2px solid #b9655f;
+    background: #2b2b28;
+    color: #fff;
+    box-shadow: none;
+  }
+
+  .hint-button--secondary::before {
+    content: 'HINT 02';
+    color: #d98c86;
+  }
+
+  .hint-button--secondary small {
+    color: #d8c8c5;
+  }
+
+  .hint-button--secondary:hover,
+  .hint-button--secondary:focus-visible {
+    border-color: #d77a72;
+    background: #383331;
+  }
+
+  .hint-button:active {
+    box-shadow: none;
+  }
+
+  .hint-button:disabled {
+    filter: grayscale(.25);
+    opacity: .52;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint-button {
+    transition: none;
+  }
+}
