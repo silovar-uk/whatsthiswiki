@@ -17,8 +17,9 @@
   <link rel="alternate icon" href="./assets/favicon.ico">
   <link rel="icon" href="./assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="./styles.css?v=20260726-04">
-  <link rel="stylesheet" href="./gags.css?v=20260726-04">
+  <link rel="stylesheet" href="./styles.css?v=20260726-05">
+  <link rel="stylesheet" href="./gags.css?v=20260726-05">
+  <link rel="stylesheet" href="./answer-jump.css?v=20260726-05">
 </head>
 <body>
   <div class="paper-noise" aria-hidden="true"></div>
@@ -38,9 +39,13 @@
 
     <footer class="site-footer">
       <p>Wikipediaの記事情報を利用しています。回答後に元記事へのリンクを表示します。</p>
-      <p class="build-label">BUILD 2026.07.26-04</p>
+      <p class="build-label">BUILD 2026.07.26-05</p>
     </footer>
   </div>
+
+  <button id="answer-jump-button" class="answer-jump-button is-hidden" type="button" aria-hidden="true" tabindex="-1">
+    回答する <span aria-hidden="true">↓</span>
+  </button>
 
   <template id="loading-template">
     <section class="panel loading-panel">
@@ -50,6 +55,7 @@
     </section>
   </template>
 
-  <script type="module" src="./app.js?v=20260726-04"></script>
+  <script type="module" src="./app.js?v=20260726-05"></script>
+  <script type="module" src="./answer-jump.js?v=20260726-05"></script>
 </body>
 </html>
