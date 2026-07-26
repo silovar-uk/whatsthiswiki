@@ -2,11 +2,16 @@ const app = document.querySelector('#app');
 
 const SOURCE_LABELS = {
   curated: 'お試し問題',
-  experimental: '試作中',
   custom: 'オリジナル問題を作る'
 };
 
 function refineSourceOptions() {
+  const experimentalInput = app.querySelector('input[name="source"][value="experimental"]');
+  experimentalInput?.closest('label')?.remove();
+
+  const segmented = app.querySelector('.segmented');
+  segmented?.classList.toggle('has-two-sources', Boolean(segmented.querySelector('input[value="curated"]') && segmented.querySelector('input[value="custom"]')));
+
   const inputs = app.querySelectorAll('input[name="source"]');
   inputs.forEach((input) => {
     const label = input.closest('label');
