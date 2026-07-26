@@ -7,7 +7,7 @@ let answerPanel = null;
 let frameRequested = false;
 
 function setButtonVisible(visible) {
-  jumpButton.classList.toggle('is-hidden', !visible);
+  jumpButton.classList.toggle('is-jump-hidden', !visible);
   jumpButton.setAttribute('aria-hidden', String(!visible));
   jumpButton.tabIndex = visible ? 0 : -1;
 }
