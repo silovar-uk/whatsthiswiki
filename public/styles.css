@@ -35,7 +35,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 a { color: inherit; }
 button { cursor: pointer; }
 
-.page-shell { width: min(1160px, calc(100% - 32px)); margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+.page-shell { width: min(1160px, calc(100% - 32px)); margin: 0 auto; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; }
 .site-header { min-height: 86px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .brand-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 2px solid var(--ink); font-weight: 900; transform: rotate(-2deg); background: var(--yellow); box-shadow: 3px 3px 0 var(--ink); }
@@ -79,6 +79,11 @@ legend, .field > span { margin-bottom: 12px; font-size: 12px; font-weight: 800; 
 .custom-settings label > span { display: block; margin-bottom: 10px; font-size: 12px; font-weight: 900; }
 .custom-settings textarea { display: block; width: 100%; min-height: 150px; resize: vertical; padding: 14px; border: 2px solid var(--gag-black, #111); border-radius: 0; background: white; color: var(--ink); line-height: 1.65; }
 .custom-settings small { display: block; margin-top: 9px; color: var(--muted); line-height: 1.6; }
+.custom-url-preview { margin-top: 14px; padding: 12px 14px; border: 2px solid var(--gag-black, #111); background: #fff; text-align: left; }
+.custom-url-preview strong { display: block; font-size: 12px; }
+.custom-url-preview ol { margin: 8px 0 0; padding-left: 22px; }
+.custom-url-preview li { margin-top: 4px; overflow-wrap: anywhere; }
+.custom-url-preview p { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
 
 .button { appearance: none; min-height: 44px; padding: 0 18px; border: 1px solid transparent; border-radius: 0; background: transparent; font-weight: 800; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; }
 .button:hover { transform: translateY(-1px); }
@@ -130,6 +135,7 @@ legend, .field > span { margin-bottom: 12px; font-size: 12px; font-weight: 800; 
 .toc-list li:last-child { border-bottom: 0; }
 .toc-number { flex: 0 0 auto; width: 24px; color: var(--red); font-family: Georgia, serif; font-size: 12px; }
 .answer-panel { position: sticky; top: 18px; padding: 28px; background: var(--ink); color: white; box-shadow: 8px 8px 0 var(--yellow); }
+.answer-drawer-toggle { display: none; }
 .answer-kicker { margin: 0 0 20px; color: var(--yellow); font-family: Georgia, "Yu Mincho", serif; font-size: 24px; font-weight: 800; }
 .answer-input-wrap { display: block; }
 .answer-input-wrap input { width: 100%; min-height: 58px; padding: 0 14px; border: 0; background: white; color: var(--ink); font-size: 16px; }
@@ -200,26 +206,32 @@ legend, .field > span { margin-bottom: 12px; font-size: 12px; font-weight: 800; 
   .brand small { display: none; }
   #share-header { padding-inline: 10px; font-size: 11px; }
   .app { padding: 36px 0 58px; }
+  body.has-answer-drawer .app { padding-bottom: calc(96px + var(--safe-bottom)); }
   .hero { padding-bottom: 32px; }
   .field-grid { grid-template-columns: 1fr; }
   .segmented { grid-template-columns: 1fr; }
   .how-to { grid-template-columns: 1fr 1fr; }
-  .question-layout { grid-template-columns: 1fr; padding-bottom: calc(var(--sheet-h, 240px) + 24px); }
+  .question-layout { grid-template-columns: 1fr; }
   .game-topbar { position: sticky; top: 0; z-index: 30; }
   .toc-list li { padding-left: calc(16px + var(--depth) * 18px); padding-right: 16px; }
+
+  .invite-panel { margin: 16px auto; padding: 24px 18px; }
+  .invite-icon { width: 52px; height: 52px; margin-bottom: 16px; }
+  .challenge-summary { grid-template-columns: repeat(3, 1fr); margin: 20px 0; }
+  .challenge-summary div { padding: 10px 4px; }
+  .challenge-summary dt { font-size: 9px; }
+  .challenge-summary dd { margin-top: 3px; font-size: 12px; overflow-wrap: anywhere; }
 }
 
 @media (max-width: 520px) {
   .hero h1 { font-size: 49px; }
-  .hint-actions, .choice-confirm > div > div { grid-template-columns: 1fr; }
+  .choice-confirm > div > div { grid-template-columns: 1fr; }
   .setup-panel { padding: 22px 17px; }
   .how-to { grid-template-columns: 1fr; }
   .how-to article { min-height: 78px; }
-  .challenge-summary { grid-template-columns: 1fr; }
   .game-topbar { align-items: center; }
   .game-topbar > strong { font-size: 19px; }
   .panel-heading { padding-inline: 16px; }
-  .answer-panel { padding: 23px 18px; }
   .result-stats { grid-template-columns: 1fr; }
   .result-stats div { border-right: 0; border-bottom: 1px solid var(--line); }
   .result-stats div:last-child { border-bottom: 0; }
