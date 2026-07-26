@@ -31,6 +31,27 @@ test('ヒントボタンの文言とclassはapp.jsが持つ', async () => {
   assert.match(source, /4択から選ぶ/);
 });
 
+// questions-extra.js は CURATED_QUESTIONS を直接 push で書き換える。
+// app-entry.js の読み込みが外れると、追加問題が黙って出題されなくなる。
+test('app-entry.jsが追加問題をapp.jsより先に読み込む', async () => {
+  const source = await readFile(new URL('../public/app-entry.js', import.meta.url), 'utf8');
+  const extraIndex = source.indexOf('questions-extra.js');
+  const appIndex = source.indexOf("'./app.js");
+  assert.notEqual(extraIndex, -1, 'questions-extra.jsが読み込まれていない');
+  assert.ok(extraIndex < appIndex, 'questions-extra.jsはapp.jsより先に読み込む必要がある');
+});
+
+test('追加問題がCURATED_QUESTIONSへ重複なく統合される', async () => {
+  const { CURATED_QUESTIONS } = await import('../public/questions.js');
+  const baseCount = CURATED_QUESTIONS.length;
+  await import('../public/questions-extra.js');
+
+  assert.ok(CURATED_QUESTIONS.length > baseCount, '追加問題が統合されていない');
+  const ids = CURATED_QUESTIONS.map((question) => question.id);
+  assert.equal(new Set(ids).size, ids.length, 'id が重複している');
+  assert.ok(CURATED_QUESTIONS.every((question) => question.sections.length > 0));
+});
+
 test('回答表記を正規化する', () => {
   assert.equal(normalizeAnswer(' ラー メン！'), 'らーめん');
   assert.equal(normalizeAnswer('ＴＯＫＹＯ・ＴＯＷＥＲ'), 'tokyotower');
