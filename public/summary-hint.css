@@ -1,0 +1,90 @@
+.hint-button--summary {
+  grid-column: 1 / -1;
+  min-height: 62px;
+  border-color: #6f8e7c;
+  background: #29483a;
+}
+
+.hint-button--summary::before {
+  content: 'HINT 02';
+  color: #bfe5ce;
+}
+
+.hint-button--summary small {
+  color: #d8f2e2;
+}
+
+.hint-button--summary:hover {
+  border-color: #9ac5aa;
+  background: #335a48;
+}
+
+.hint-actions.has-summary-hint .hint-button--secondary::before {
+  content: 'HINT 03';
+}
+
+.summary-hint-box {
+  margin-top: 10px;
+  padding: 12px 13px;
+  border-left: 4px solid #79b68f;
+  background: #f5fff8;
+  color: #1d3325;
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: left;
+}
+
+.summary-hint-box strong {
+  color: inherit;
+}
+
+.summary-hint-box.is-error {
+  border-left-color: #ff9d91;
+  background: #fff2f0;
+  color: #7c2920;
+}
+
+.review-source-link {
+  display: inline-block;
+  margin-top: 7px;
+  color: var(--red-dark);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.review-source-link:hover {
+  color: var(--red);
+}
+
+@media (max-width: 820px) {
+  .hint-button--summary {
+    grid-column: auto;
+    min-height: 58px;
+    padding: 9px 12px;
+    border-color: #79a48a;
+    background: #29483a;
+  }
+
+  .hint-button--summary::before {
+    content: 'HINT 02';
+    color: #c8ead4;
+  }
+
+  .hint-actions.has-summary-hint .hint-button--secondary::before {
+    content: 'HINT 03';
+  }
+
+  .summary-hint-box {
+    margin-top: 9px;
+    padding: 11px 12px;
+    font-size: 12px;
+    line-height: 1.75;
+  }
+
+  .review-source-link {
+    margin-top: 6px;
+    font-size: 11px;
+  }
+}
