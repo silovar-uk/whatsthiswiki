@@ -29,6 +29,9 @@ export function scoreAnswer({ correct, mode, elapsedMs }) {
   if (mode === 'choice') return 350;
 
   const seconds = Math.floor(Math.max(0, elapsedMs) / 1000);
+  if (globalThis.__whatsthiswikiSummaryHintUsed === true) {
+    return 400 + Math.max(0, 200 - seconds * 5);
+  }
   if (mode === 'initial') {
     return 650 + Math.max(0, 250 - seconds * 5);
   }
