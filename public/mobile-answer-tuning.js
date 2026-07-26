@@ -1,9 +1,11 @@
 const app = document.querySelector('#app');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const mobileLayout = matchMedia('(max-width: 820px)');
+const visualViewport = window.visualViewport;
 
 let focusSessionActive = false;
 let settleTimers = [];
+let previousViewportHeight = visualViewport?.height || window.innerHeight;
 
 function clearSettleTimers() {
   settleTimers.forEach((timer) => clearTimeout(timer));
@@ -66,6 +68,7 @@ app.addEventListener('focusin', (event) => {
   if (!event.target.matches?.('#answer-input')) return;
   clearSettleTimers();
   focusSessionActive = true;
+  previousViewportHeight = visualViewport?.height || window.innerHeight;
   document.body.classList.add('answer-input-focused');
 });
 
@@ -81,10 +84,24 @@ app.addEventListener('submit', (event) => {
   settleAnswerView({ force: true });
 }, { capture: true });
 
-window.visualViewport?.addEventListener('resize', () => {
+visualViewport?.addEventListener('resize', () => {
+  const nextHeight = visualViewport.height;
+  const heightIncrease = nextHeight - previousViewportHeight;
+  previousViewportHeight = nextHeight;
+
   if (!focusSessionActive) return;
-  if (document.activeElement?.matches?.('#answer-input')) return;
-  settleAnswerView({ force: true });
+
+  const activeInput = document.activeElement?.matches?.('#answer-input')
+    ? document.activeElement
+    : null;
+
+  if (heightIncrease > 60 && activeInput) {
+    activeInput.blur();
+    settleAnswerView({ force: true });
+    return;
+  }
+
+  if (!activeInput) settleAnswerView({ force: true });
 }, { passive: true });
 
 const observer = new MutationObserver(() => {
