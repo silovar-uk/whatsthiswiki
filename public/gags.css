@@ -369,7 +369,26 @@ body {
 @keyframes vt-in  { from { opacity: 0; transform: translateX(20px); } }
 
 /* --- ボタンの押し込み --- */
-.button-primary:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--gag-black); }
+.button-primary:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0 var(--gag-black); animation: none; }
+
+/* --- 未入力3秒後だけ、回答ボタンが呼吸する --- */
+#answer-form:has(#answer-input:placeholder-shown) .button-primary {
+  animation: cta-breathe 2.4s ease-in-out 3s infinite;
+}
+@keyframes cta-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+
+/* --- 次の問題への矢印誘導 --- */
+#next-question span { display: inline-block; animation: arrow-nudge 1.4s ease-in-out infinite; }
+@keyframes arrow-nudge {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(5px); }
+}
+
+/* --- 入力欄のフォーカス演出(既存のoutlineは維持) --- */
+#answer-input:focus { box-shadow: 0 0 0 3px var(--gag-cyan); }
 
 /* --- 読み込み中の脈動 --- */
 [data-loading-message] { animation: loading-pulse 1.6s ease-in-out infinite; }
