@@ -20,6 +20,26 @@ const app = document.querySelector('#app');
 const headerShareButton = document.querySelector('#share-header');
 const loadingTemplate = document.querySelector('#loading-template');
 const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+const MOBILE_LAYOUT = matchMedia('(max-width: 820px)');
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+}
+
+function withTransition(fn) {
+  if (!document.startViewTransition || REDUCED_MOTION.matches) {
+    fn();
+    scrollToTop();
+    return;
+  }
+  const transition = document.startViewTransition(fn);
+  transition.finished.then(scrollToTop).catch(scrollToTop);
+  return transition;
+}
+
+function setAnswerDrawerActive(active) {
+  document.body.classList.toggle('has-answer-drawer', active);
+}
 
 function burstConfetti(host) {
   if (REDUCED_MOTION.matches) return;
@@ -51,22 +71,6 @@ function countUp(el, from, to, ms = 620) {
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
-}
-
-function withTransition(fn) {
-  if (!document.startViewTransition || REDUCED_MOTION.matches) return fn();
-  return document.startViewTransition(fn);
-}
-
-let sheetObserver = null;
-
-function trackSheetHeight(panel) {
-  sheetObserver?.disconnect();
-  if (!window.ResizeObserver) return;
-  sheetObserver = new ResizeObserver(([entry]) => {
-    document.documentElement.style.setProperty('--sheet-h', `${Math.round(entry.contentRect.height)}px`);
-  });
-  sheetObserver.observe(panel);
 }
 
 const LABELS = {
@@ -133,6 +137,7 @@ function showToast(message) {
 }
 
 function setLoading(message = '問題を準備しています…') {
+  setAnswerDrawerActive(false);
   app.replaceChildren(loadingTemplate.content.cloneNode(true));
   const target = app.querySelector('[data-loading-message]');
   if (target) target.textContent = message;
@@ -150,6 +155,35 @@ function parseCustomUrls(value) {
       .map((item) => item.trim())
       .filter(Boolean)
   )];
+}
+
+function wikipediaTitleFromUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!/(^|\.)wikipedia\.org$/i.test(url.hostname)) return null;
+    const prefix = '/wiki/';
+    if (!url.pathname.startsWith(prefix)) return null;
+    return decodeURIComponent(url.pathname.slice(prefix.length)).replaceAll('_', ' ').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+function renderCustomUrlPreview(textarea, preview) {
+  const urls = parseCustomUrls(textarea.value);
+  const titles = urls.map(wikipediaTitleFromUrl).filter(Boolean);
+  if (!urls.length) {
+    preview.classList.add('is-hidden');
+    preview.innerHTML = '';
+    return;
+  }
+  const invalidCount = urls.length - titles.length;
+  preview.classList.remove('is-hidden');
+  preview.innerHTML = `
+    <strong>読み取りプレビュー</strong>
+    ${titles.length ? `<ol>${titles.map((title) => `<li>${escapeHtml(title)}</li>`).join('')}</ol>` : '<p>読み取れるWikipedia URLがありません。</p>'}
+    ${invalidCount ? `<small>${invalidCount}件はWikipediaの記事URLとして読み取れませんでした。</small>` : ''}
+  `;
 }
 
 function buildCuratedQuestions({ category, difficulty, count }) {
@@ -173,6 +207,7 @@ function buildCuratedQuestions({ category, difficulty, count }) {
 
 function renderHome() {
   clearState();
+  setAnswerDrawerActive(false);
   setHeaderShare(false);
   document.title = "What's This Wiki?｜目次だけで何の記事？";
   history.replaceState(null, '', `${location.pathname}${location.search}`);
@@ -236,6 +271,7 @@ function renderHome() {
                 <textarea id="custom-urls" name="customUrls" placeholder="https://ja.wikipedia.org/wiki/富士山&#10;https://ja.wikipedia.org/wiki/東京タワー"></textarea>
               </label>
               <small>1行に1件、1〜10件まで入力できます。1件だけなら1問のクイズになります。</small>
+              <div id="custom-url-preview" class="custom-url-preview is-hidden" aria-live="polite"></div>
             </section>
           </div></div>
         </details>
@@ -256,6 +292,10 @@ function renderHome() {
   const standardSettings = document.querySelector('#standard-settings');
   const customSettings = document.querySelector('#custom-settings');
   const submitButton = document.querySelector('#setup-submit');
+  const customUrls = document.querySelector('#custom-urls');
+  const customUrlPreview = document.querySelector('#custom-url-preview');
+
+  customUrls.addEventListener('input', () => renderCustomUrlPreview(customUrls, customUrlPreview));
 
   form.addEventListener('change', (event) => {
     if (event.target.name !== 'source') return;
@@ -271,7 +311,8 @@ function renderHome() {
     } else if (source === 'custom') {
       sourceNote.textContent = '入力した記事URLから、オリジナルの問題セットを作ります。';
       submitButton.innerHTML = '問題を作る <span aria-hidden="true">→</span>';
-      setTimeout(() => document.querySelector('#custom-urls')?.focus(), 0);
+      renderCustomUrlPreview(customUrls, customUrlPreview);
+      setTimeout(() => customUrls.focus(), 0);
     } else {
       sourceNote.textContent = '遊びやすさを確認した問題から出題します。';
       countSelect.innerHTML = '<option value="5">5問</option><option value="10">10問</option>';
@@ -294,9 +335,7 @@ async function createGameFromForm(event) {
 
     if (settings.source === 'custom') {
       const urls = parseCustomUrls(settings.customUrls);
-      if (urls.length < 1 || urls.length > 10) {
-        throw new Error('WikipediaのURLを1〜10件入力してください。');
-      }
+      if (urls.length < 1 || urls.length > 10) throw new Error('WikipediaのURLを1〜10件入力してください。');
       setLoading(`${urls.length}件の記事を読み込んでいます…`);
       questions = await createQuestionsFromUrls({ urls, onProgress: updateLoading });
       category = 'custom';
@@ -309,12 +348,7 @@ async function createGameFromForm(event) {
       questions = buildCuratedQuestions(settings);
     }
 
-    const challenge = {
-      source: settings.source,
-      category,
-      difficulty,
-      questions
-    };
+    const challenge = { source: settings.source, category, difficulty, questions };
     await prepareChallenge(challenge, { replaceHash: true });
     startGame();
   } catch (error) {
@@ -332,6 +366,7 @@ async function prepareChallenge(challenge, { replaceHash = false, encoded = null
 
 function renderSharedIntro(challenge, encoded) {
   clearState();
+  setAnswerDrawerActive(false);
   state.challenge = challenge;
   state.encoded = encoded;
   state.shareUrl = buildChallengeUrl(encoded);
@@ -375,8 +410,24 @@ function tocMarkup(sections) {
   `).join('');
 }
 
+function setupAnswerDrawer() {
+  const panel = document.querySelector('.answer-panel');
+  const toggle = document.querySelector('#answer-drawer-toggle');
+  if (!panel || !toggle) return;
+  const label = toggle.querySelector('.answer-drawer-state');
+  toggle.addEventListener('click', () => {
+    const collapsed = panel.classList.toggle('is-collapsed');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    label.textContent = collapsed ? '開く' : '閉じる';
+    if (!collapsed) {
+      setTimeout(() => panel.querySelector('#answer-input')?.focus({ preventScroll: true }), 80);
+    }
+  });
+}
+
 function renderQuestion() {
   const question = state.challenge.questions[state.index];
+  setAnswerDrawerActive(true);
   state.questionStartedAt = performance.now();
   state.resolved = false;
   state.hintMode = 'none';
@@ -393,31 +444,33 @@ function renderQuestion() {
 
     <section class="question-layout">
       <article class="panel toc-panel">
-        <div class="panel-heading">
-          <span>Wikipedia</span>
-          <strong>CONTENTS</strong>
-        </div>
+        <div class="panel-heading"><span>Wikipedia</span><strong>CONTENTS</strong></div>
         <ol class="toc-list">${tocMarkup(question.sections)}</ol>
       </article>
 
-      <aside class="answer-panel">
+      <aside class="answer-panel is-collapsed">
+        <button class="answer-drawer-toggle" type="button" id="answer-drawer-toggle" aria-controls="answer-area" aria-expanded="false">
+          <span class="answer-drawer-title"><small>ANSWER</small><strong>回答する</strong></span>
+          <span class="answer-drawer-state">開く</span>
+          <span class="answer-drawer-chevron" aria-hidden="true">⌃</span>
+        </button>
         <div id="answer-area">
           <p class="answer-kicker">この記事は何？</p>
           <form id="answer-form" autocomplete="off">
             <label class="answer-input-wrap">
               <span class="sr-only">記事名を入力</span>
-              <input id="answer-input" name="answer" maxlength="80" placeholder="記事名を入力" enterkeyhint="done" required autofocus>
+              <input id="answer-input" name="answer" maxlength="80" placeholder="記事名を入力" enterkeyhint="done" required>
             </label>
             <button class="button button-primary" type="submit">回答する</button>
           </form>
 
           <div class="hint-actions" aria-label="ヒント">
             <button id="show-initial" class="hint-button" type="button">
-              <strong>最初の1文字を入れる</strong>
+              <strong>ヒント：最初の１文字だけ知る</strong>
               <small>正解時 最大900pt</small>
             </button>
             <button id="request-choices" class="hint-button" type="button">
-              <strong>4択を見る</strong>
+              <strong>ヒント：４択にする</strong>
               <small>正解時 350pt</small>
             </button>
           </div>
@@ -439,10 +492,10 @@ function renderQuestion() {
   const total = state.challenge.questions.length;
   const bar = document.querySelector('.progress-track span');
   requestAnimationFrame(() => { bar.style.width = `${((state.index + 1) / total) * 100}%`; });
-  trackSheetHeight(document.querySelector('.answer-panel'));
+  setupAnswerDrawer();
 
   const input = document.querySelector('#answer-input');
-  setTimeout(() => input?.focus(), 50);
+  if (!MOBILE_LAYOUT.matches) setTimeout(() => input?.focus(), 50);
   document.querySelector('#answer-form').addEventListener('submit', (event) => {
     event.preventDefault();
     const mode = state.hintMode === 'initial' ? 'initial' : 'text';
@@ -505,6 +558,16 @@ function modeLabel(mode) {
   return 'ヒントなし';
 }
 
+function openDrawerForResult() {
+  const panel = document.querySelector('.answer-panel');
+  const toggle = document.querySelector('#answer-drawer-toggle');
+  if (!panel || !toggle) return;
+  panel.classList.remove('is-collapsed');
+  panel.classList.add('is-result-state');
+  toggle.setAttribute('aria-expanded', 'true');
+  toggle.querySelector('.answer-drawer-state').textContent = '閉じる';
+}
+
 function resolveAnswer({ mode, submitted }) {
   if (state.resolved) return;
   const question = state.challenge.questions[state.index];
@@ -537,10 +600,11 @@ function resolveAnswer({ mode, submitted }) {
       <small>回答方法：${modeLabel(mode)}</small>
       <a href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">Wikipediaで記事を読む ↗</a>
       <button id="next-question" class="button button-primary">
-        ${state.index + 1 === state.challenge.questions.length ? '結果を見る' : '次の問題'} <span aria-hidden="true">→</span>
+        ${state.index + 1 === state.challenge.questions.length ? '結果を見る' : '次の問題を見る'} <span aria-hidden="true">→</span>
       </button>
     </div>
   `;
+  openDrawerForResult();
 
   const resultBox = document.querySelector('.answer-result');
   if (correct) burstConfetti(resultBox);
@@ -560,6 +624,7 @@ function resolveAnswer({ mode, submitted }) {
 }
 
 function renderResults() {
+  setAnswerDrawerActive(false);
   const elapsedMs = performance.now() - state.startedAt;
   const score = state.answers.reduce((sum, answer) => sum + answer.score, 0);
   const correctCount = state.answers.filter((answer) => answer.correct).length;
@@ -635,6 +700,7 @@ async function shareChallenge(result = null) {
 }
 
 function renderError(message, retry) {
+  setAnswerDrawerActive(false);
   setHeaderShare(false);
   app.innerHTML = `
     <section class="panel error-panel">
