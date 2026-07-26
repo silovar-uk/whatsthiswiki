@@ -186,55 +186,59 @@ function renderHome() {
 
     <section class="panel setup-panel">
       <form id="setup-form">
-        <fieldset>
-          <legend>問題の作り方</legend>
-          <div class="segmented">
-            <label><input type="radio" name="source" value="curated" checked><span>確認済み問題</span></label>
-            <label><input type="radio" name="source" value="experimental"><span>Wikipedia探索 <small>実験</small></span></label>
-            <label><input type="radio" name="source" value="custom"><span>URLから作る</span></label>
-          </div>
-          <p id="source-note" class="field-note">遊びやすさを確認した問題から出題します。</p>
-        </fieldset>
-
-        <div id="standard-settings" class="source-details">
-          <div class="field-grid">
-            <label class="field">
-              <span>ジャンル</span>
-              <select name="category">
-                ${Object.entries(LABELS.categories)
-                  .filter(([value]) => value !== 'custom')
-                  .map(([value, label]) => `<option value="${value}">${label}</option>`)
-                  .join('')}
-              </select>
-            </label>
-            <label class="field">
-              <span>難易度</span>
-              <select name="difficulty">
-                <option value="mixed">まぜこぜ</option>
-                <option value="easy">やさしい</option>
-                <option value="normal">ふつう</option>
-                <option value="hard">むずかしい</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>問題数</span>
-              <select id="question-count" name="count">
-                <option value="5">5問</option>
-                <option value="10">10問</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <section id="custom-settings" class="custom-settings is-hidden">
-          <label for="custom-urls">
-            <span>日本語版Wikipediaの記事URL</span>
-            <textarea id="custom-urls" name="customUrls" placeholder="https://ja.wikipedia.org/wiki/富士山&#10;https://ja.wikipedia.org/wiki/東京タワー"></textarea>
-          </label>
-          <small>1行に1件、1〜10件まで入力できます。1件だけなら1問のクイズになります。</small>
-        </section>
-
         <button id="setup-submit" class="button button-primary button-large" type="submit">すぐ遊ぶ <span aria-hidden="true">→</span></button>
+
+        <details class="setup-details">
+          <summary>問題の作り方を選ぶ</summary>
+          <div class="setup-details__body"><div>
+            <fieldset>
+              <div class="segmented">
+                <label><input type="radio" name="source" value="curated" checked><span>確認済み問題</span></label>
+                <label><input type="radio" name="source" value="experimental"><span>Wikipedia探索 <small>実験</small></span></label>
+                <label><input type="radio" name="source" value="custom"><span>URLから作る</span></label>
+              </div>
+              <p id="source-note" class="field-note">遊びやすさを確認した問題から出題します。</p>
+            </fieldset>
+
+            <div id="standard-settings" class="source-details">
+              <div class="field-grid">
+                <label class="field">
+                  <span>ジャンル</span>
+                  <select name="category">
+                    ${Object.entries(LABELS.categories)
+                      .filter(([value]) => value !== 'custom')
+                      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+                      .join('')}
+                  </select>
+                </label>
+                <label class="field">
+                  <span>難易度</span>
+                  <select name="difficulty">
+                    <option value="mixed">まぜこぜ</option>
+                    <option value="easy">やさしい</option>
+                    <option value="normal">ふつう</option>
+                    <option value="hard">むずかしい</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>問題数</span>
+                  <select id="question-count" name="count">
+                    <option value="5">5問</option>
+                    <option value="10">10問</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <section id="custom-settings" class="custom-settings is-hidden">
+              <label for="custom-urls">
+                <span>日本語版Wikipediaの記事URL</span>
+                <textarea id="custom-urls" name="customUrls" placeholder="https://ja.wikipedia.org/wiki/富士山&#10;https://ja.wikipedia.org/wiki/東京タワー"></textarea>
+              </label>
+              <small>1行に1件、1〜10件まで入力できます。1件だけなら1問のクイズになります。</small>
+            </section>
+          </div></div>
+        </details>
       </form>
     </section>
 
