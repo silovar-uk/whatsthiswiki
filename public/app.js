@@ -58,6 +58,17 @@ function withTransition(fn) {
   return document.startViewTransition(fn);
 }
 
+let sheetObserver = null;
+
+function trackSheetHeight(panel) {
+  sheetObserver?.disconnect();
+  if (!window.ResizeObserver) return;
+  sheetObserver = new ResizeObserver(([entry]) => {
+    document.documentElement.style.setProperty('--sheet-h', `${Math.round(entry.contentRect.height)}px`);
+  });
+  sheetObserver.observe(panel);
+}
+
 const LABELS = {
   categories: {
     all: 'すべて',
@@ -424,6 +435,7 @@ function renderQuestion() {
   const total = state.challenge.questions.length;
   const bar = document.querySelector('.progress-track span');
   requestAnimationFrame(() => { bar.style.width = `${((state.index + 1) / total) * 100}%`; });
+  trackSheetHeight(document.querySelector('.answer-panel'));
 
   const input = document.querySelector('#answer-input');
   setTimeout(() => input?.focus(), 50);
