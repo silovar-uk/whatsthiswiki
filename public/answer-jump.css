@@ -29,9 +29,7 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  .answer-jump-button[hidden],
-  .answer-jump-button.is-hidden {
-    display: inline-flex;
+  .answer-jump-button.is-jump-hidden {
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
