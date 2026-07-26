@@ -81,11 +81,6 @@ function base64UrlToBytes(value) {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-async function gzip(bytes) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
 async function gunzip(bytes) {
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
@@ -140,16 +135,9 @@ export function expandChallenge(payload) {
   };
 }
 
-export async function encodeChallenge(challenge, { forcePlain = false } = {}) {
+export async function encodeChallenge(challenge) {
   const text = JSON.stringify(compactChallenge(challenge));
   const bytes = new TextEncoder().encode(text);
-  if (!forcePlain && 'CompressionStream' in globalThis) {
-    try {
-      return `g.${bytesToBase64Url(await gzip(bytes))}`;
-    } catch {
-      // Compression is optional. Fall back to plain JSON.
-    }
-  }
   return `j.${bytesToBase64Url(bytes)}`;
 }
 
