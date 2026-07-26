@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   compactChallenge,
   decodeChallenge,
@@ -12,6 +13,23 @@ import {
   trailingCorrectCount
 } from '../public/utils.js';
 import { extractWikipediaTitle } from '../public/wiki.js';
+
+// mobile-answer-tuning.jsのMutationObserverは#app配下を監視している。
+// このファイルからDOMを書き換えると、observerが自分自身を再発火させて
+// 無限ループになり、問題画面でメインスレッドが停止する。
+test('mobile-answer-tuning.jsはDOMを書き換えない', async () => {
+  const source = await readFile(new URL('../public/mobile-answer-tuning.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\.(textContent|innerHTML|innerText)\s*=/);
+  assert.doesNotMatch(source, /\.(replaceChildren|insertAdjacentHTML)\s*\(/);
+});
+
+test('ヒントボタンの文言とclassはapp.jsが持つ', async () => {
+  const source = await readFile(new URL('../public/app.js', import.meta.url), 'utf8');
+  assert.match(source, /hint-button hint-button--primary/);
+  assert.match(source, /hint-button hint-button--secondary/);
+  assert.match(source, /最初の1文字を見る/);
+  assert.match(source, /4択から選ぶ/);
+});
 
 test('回答表記を正規化する', () => {
   assert.equal(normalizeAnswer(' ラー メン！'), 'らーめん');

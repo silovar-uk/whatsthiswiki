@@ -465,13 +465,13 @@ function renderQuestion() {
           </form>
 
           <div class="hint-actions" aria-label="ヒント">
-            <button id="show-initial" class="hint-button" type="button">
-              <strong>ヒント：最初の１文字だけ知る</strong>
-              <small>正解時 最大900pt</small>
+            <button id="show-initial" class="hint-button hint-button--primary" type="button">
+              <strong>最初の1文字を見る</strong>
+              <small>最大900pt</small>
             </button>
-            <button id="request-choices" class="hint-button" type="button">
-              <strong>ヒント：４択にする</strong>
-              <small>正解時 350pt</small>
+            <button id="request-choices" class="hint-button hint-button--secondary" type="button">
+              <strong>4択から選ぶ</strong>
+              <small>正解時350pt</small>
             </button>
           </div>
           <p id="hint-status" class="hint-status is-hidden"></p>

@@ -45,25 +45,6 @@ function settleAnswerView({ force = false } = {}) {
   settleTimers.push(finishTimer);
 }
 
-function enhanceHintButtons() {
-  const hintButtons = app.querySelectorAll('.hint-actions .hint-button');
-  if (hintButtons.length < 2) return;
-
-  const [initialButton, choiceButton] = hintButtons;
-  initialButton.classList.add('hint-button--primary');
-  choiceButton.classList.add('hint-button--secondary');
-
-  const initialTitle = initialButton.querySelector('strong');
-  const initialMeta = initialButton.querySelector('small');
-  const choiceTitle = choiceButton.querySelector('strong');
-  const choiceMeta = choiceButton.querySelector('small');
-
-  if (initialTitle) initialTitle.textContent = '最初の1文字を見る';
-  if (initialMeta) initialMeta.textContent = '最大900pt';
-  if (choiceTitle) choiceTitle.textContent = '4択から選ぶ';
-  if (choiceMeta) choiceMeta.textContent = '正解時350pt';
-}
-
 app.addEventListener('focusin', (event) => {
   if (!event.target.matches?.('#answer-input')) return;
   clearSettleTimers();
@@ -104,12 +85,13 @@ visualViewport?.addEventListener('resize', () => {
   if (!activeInput) settleAnswerView({ force: true });
 }, { passive: true });
 
+// このコールバックの中でDOMを書き換えてはいけない。
+// 書き換えると自分自身が再発火し、無限ループでメインスレッドが停止する。
+// ヒントボタンの文言とclassはapp.jsのテンプレート側に持たせている。
 const observer = new MutationObserver(() => {
-  enhanceHintButtons();
   if (focusSessionActive && app.querySelector('.answer-result')) {
     settleAnswerView({ force: true });
   }
 });
 
 observer.observe(app, { childList: true, subtree: true });
-enhanceHintButtons();

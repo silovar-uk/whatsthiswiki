@@ -56,6 +56,18 @@ app.addEventListener('change', (event) => {
   requestAnimationFrame(refineSourceOptions);
 });
 
-const observer = new MutationObserver(refineUi);
-observer.observe(app, { childList: true, subtree: true, characterData: true });
+const OBSERVE_OPTIONS = { childList: true, subtree: true, characterData: true };
+
+// refineUi()はDOMを書き換えるため、必ず監視を止めてから実行する。
+// 監視したまま書き換えると自分自身が再発火し、無限ループでメインスレッドが停止する。
+const observer = new MutationObserver(() => {
+  observer.disconnect();
+  try {
+    refineUi();
+  } finally {
+    observer.observe(app, OBSERVE_OPTIONS);
+  }
+});
+
+observer.observe(app, OBSERVE_OPTIONS);
 refineUi();
