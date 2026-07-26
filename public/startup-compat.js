@@ -1,5 +1,7 @@
-// Some browser/OS combinations can stall while creating a compressed share URL.
-// Keep game startup reliable by forcing the existing plain-JSON fallback path.
+// Keep game startup reliable across browsers.
+// 1. Force the existing plain-JSON fallback instead of waiting on CompressionStream.
+// 2. Do not write the long challenge payload into the address bar during local play.
+//    The generated share URL remains available through the share buttons.
 try {
   if ('CompressionStream' in globalThis) {
     Object.defineProperty(globalThis, 'CompressionStream', {
@@ -14,4 +16,17 @@ try {
   } catch {
     // The app still has its own compression fallback.
   }
+}
+
+try {
+  const nativeReplaceState = history.replaceState.bind(history);
+  history.replaceState = (state, title, url) => {
+    const nextUrl = typeof url === 'string' ? url : url?.toString?.();
+    if (nextUrl?.startsWith('#challenge=')) {
+      return nativeReplaceState(state, title, `${location.pathname}${location.search}`);
+    }
+    return nativeReplaceState(state, title, url);
+  };
+} catch {
+  // Continue with the browser's native history implementation.
 }
